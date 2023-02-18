@@ -109,11 +109,6 @@ export default {
   background: rgb(var(--v-theme-secondary));
 }
 
-@font-face {
-  font-family: 'Hello-Headline';
-  src: url('~@/assets/Hello-Headline.ttf') format('truetype');
-}
-
 .v-toolbar-title {
   color: rgb(var(--v-theme-primary));
 }
