@@ -1,42 +1,85 @@
 <template>
-  <v-app>
-    <v-app-bar class="px-3" color="white" app>
-      <v-avatar color="grey darken-1" size="32"></v-avatar>
+  <v-app class="bg-surface">
+    <v-navigation-drawer
+      disable-resize-watcher
+      disable-route-watcher
+      class="bg-background"
+      v-model="drawer"
+    >
+    </v-navigation-drawer>
 
-      <v-spacer></v-spacer>
-
-      <v-tabs centered color="grey darken-2">
-        <v-tab v-for="link in links" :key="link">
-          {{ link }}
-        </v-tab>
-      </v-tabs>
-      <v-spacer></v-spacer>
+    <v-app-bar>
+      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-img
+        src="@/assets/logo.svg"
+        max-height="64"
+        max-width="64"
+        contain
+      />
+      <v-toolbar-title class="ml-1 text-h5 font-weight-bold">
+        Minty Fresh Hatchery
+      </v-toolbar-title>
     </v-app-bar>
 
     <v-main class="grey lighten-3">
       <v-container>
         <v-row>
           <v-col cols="12" sm="4">
-            <v-sheet rounded="xl" min-height="268">
-              <!--  -->
-            </v-sheet>
+
+            <v-card class="bg-background elevation-8 mb-6">
+              <v-img
+                src="https://bdn-ss-hh.s3.amazonaws.com/uploads/2019/08/BabyQuail4.jpg"
+                class="align-end"
+                gradient="to bottom, #00000000, #00000000 80%, #000000bb"
+                cover
+              >
+                <v-card-title class="text-white">
+                    <v-icon color="red" icon="mdi-circle-medium"/>Live
+                </v-card-title>
+              </v-img>
+            </v-card>
+
+
+            <v-card class="bg-background elevation-8 mb-6">
+              <v-card-item title="Current Target Settings"> </v-card-item>
+              <v-card-text class="pb-0">
+                <v-row no-gutters>
+                  <v-col
+                    class="text-h4 text-grey-darken-3"
+                    cols="6"
+                  >
+                    <v-icon color="primary" icon="mdi-thermometer"/>102&deg;F
+                  </v-col>
+                </v-row>
+                <v-row no-gutters>
+                  <v-col
+                    class="text-h4 text-grey-darken-3"
+                    cols="6"
+                  >
+                    <v-icon color="secondary" icon="mdi-water"/>45%
+                  </v-col>
+                </v-row>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn size="small" color="primary" variant="text" icon="mdi-cog"></v-btn>
+              </v-card-actions>
+            </v-card>
+
           </v-col>
 
           <v-col cols="12" sm="8">
-            <v-sheet rounded="xl">
-              <v-sparkline
-                :value="value"
-                :gradient="gradient"
-                :smooth="radius || false"
-                :padding="padding"
-                :line-width="width"
-                :stroke-linecap="lineCap"
-                :gradient-direction="gradientDirection"
-                :fill="fill"
-                :type="type"
-                :auto-line-width="autoLineWidth"
-              ></v-sparkline>
-            </v-sheet>
+            <AtmosphereCard
+              title="Incubator Atmosphere"
+              :current-humidity="46.1"
+              :current-temperature="100.1"
+              :start-open="true"
+            />
+            <AtmosphereCard
+              title="External Atmosphere"
+              :current-humidity="46.1"
+              :current-temperature="70.2"
+            />
           </v-col>
         </v-row>
       </v-container>
@@ -45,21 +88,33 @@
 </template>
 
 <script>
+import AtmosphereCard from "@/components/AtmosphereCard.vue";
+
 export default {
   name: "App",
   data: () => ({
-    links: ["Home", "Settings"],
-    width: 2,
-    radius: 10,
-    padding: 10,
-    lineCap: 'round',
-    gradient: ['red', 'orange', 'yellow'],
-    value: [0, 2, 5, 9, 5, 10, 3, 5, 0, 0, 1, 8, 2, 9, 0],
-    labels: [0, 2, 5, 9, 5, 10, 3, 5, 0, 0, 1, 8, 2, 9, 0],
-    gradientDirection: 'top',
-    fill: true,
-    type: 'trend',
-    autoLineWidth: false,
+    drawer: false,
   }),
+  components: {
+    AtmosphereCard,
+  },
 };
 </script>
+
+<style>
+::selection {
+  background: rgb(var(--v-theme-secondary));
+}
+::-moz-selection {
+  background: rgb(var(--v-theme-secondary));
+}
+
+@font-face {
+  font-family: 'Hello-Headline';
+  src: url('~@/assets/Hello-Headline.ttf') format('truetype');
+}
+
+.v-toolbar-title {
+  color: rgb(var(--v-theme-primary));
+}
+</style>
