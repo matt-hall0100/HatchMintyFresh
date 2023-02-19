@@ -19,7 +19,7 @@ export const darkTheme = {
   dark: true,
   colors: {
     background: '#121212',
-    surface: '#161717',
+    surface: '#202222',
     primary: '#3eb489',
     primaryOpaqueFill: '#3eb48944',
     secondary: '#3eaab4',
@@ -29,7 +29,7 @@ export const darkTheme = {
 
 export default createVuetify({
   theme: {
-    defaultTheme: 'lightTheme',
+    defaultTheme: 'darkTheme',
     themes: {
       lightTheme,
       darkTheme,

@@ -4,12 +4,12 @@
 
     <v-card-text class="pb-0">
       <v-row no-gutters>
-        <v-col class="text-h4 text-grey-darken-3" cols="6">
+        <v-col class="text-h4 text-primary" cols="6">
           <v-icon color="primary" icon="mdi-thermometer"/>{{ currentTemperature }}&deg;F
         </v-col>
       </v-row>
       <v-row no-gutters>
-        <v-col class="text-h4 text-grey-darken-3" cols="6">
+        <v-col class="text-h4 text-secondary" cols="6">
           <v-icon color="secondary" icon="mdi-water"/>{{ currentHumidity }}%
         </v-col>
       </v-row>
@@ -54,9 +54,9 @@ Chart.register(
   Tooltip,
   Legend,
   Filler
-);
-Chart.defaults.color = "#000";
-Chart.defaults.font.size = 14;
+)
+Chart.defaults.font.size = 14
+// Chart.defaults.backgroundColor = '#ff00ff'
 
 export default {
   name: "AtmosphereCard",
@@ -71,6 +71,9 @@ export default {
   },
   mounted() {
     this.expand = this.startOpen
+      console.log(this.$vuetify.theme.current.colors)
+    Chart.defaults.borderColor = this.$vuetify.theme.current.colors['on-surface-variant']
+    Chart.defaults.color = this.$vuetify.theme.current.colors["on-background"]
   },
   data: () => ({
     labels: { 0: "SU", 1: "MO", 2: "TU", 3: "WED", 4: "TH", 5: "FR", 6: "SA" },

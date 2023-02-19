@@ -11,7 +11,15 @@
     <v-app-bar>
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <v-img
+        v-if="!isDark"
         src="@/assets/logo.svg"
+        max-height="64"
+        max-width="64"
+        contain
+      />
+      <v-img
+        v-if="isDark"
+        src="@/assets/logo_dark.svg"
         max-height="64"
         max-width="64"
         contain
@@ -19,6 +27,8 @@
       <v-toolbar-title class="ml-1 text-h5 font-weight-bold">
         Minty Fresh Hatchery
       </v-toolbar-title>
+      <v-spacer/>
+      <v-btn @click="toggleTheme" icon="mdi-brightness-6"></v-btn>
     </v-app-bar>
 
     <v-main class="grey lighten-3">
@@ -62,7 +72,7 @@
               </v-card-text>
               <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn size="small" color="primary" variant="text" icon="mdi-cog"></v-btn>
+                <v-btn color="primary" icon="mdi-cog"></v-btn>
               </v-card-actions>
             </v-card>
 
@@ -88,13 +98,27 @@
 </template>
 
 <script>
-import AtmosphereCard from "@/components/AtmosphereCard.vue";
+import AtmosphereCard from "@/components/AtmosphereCard.vue"
+import { useTheme } from 'vuetify'
 
 export default {
+  setup () {
+    const theme = useTheme()
+
+    return {
+      theme,
+      toggleTheme: () => theme.global.name.value = theme.global.current.value.dark ? 'lightTheme' : 'darkTheme'
+    }
+  },
   name: "App",
   data: () => ({
     drawer: false,
   }),
+  computed: {
+    isDark() {
+      return this.$vuetify.theme.current.dark
+    }
+  },
   components: {
     AtmosphereCard,
   },
