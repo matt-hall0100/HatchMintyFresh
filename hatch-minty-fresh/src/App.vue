@@ -25,16 +25,15 @@
         contain
       />
       <v-toolbar-title class="ml-1 text-h5 font-weight-bold">
-        Minty Fresh Hatchery
+        Hatch Minty Fresh
       </v-toolbar-title>
-      <v-spacer/>
-      <v-btn @click="toggleTheme" icon="mdi-brightness-6"></v-btn>
+      <v-btn @click="toggleTheme(); updateCharts()" icon="mdi-brightness-6"></v-btn>
     </v-app-bar>
 
     <v-main class="grey lighten-3">
       <v-container>
         <v-row>
-          <v-col cols="12" sm="4">
+          <v-col cols="12" sm="4" class="py-0">
 
             <v-card class="bg-background elevation-8 mb-6">
               <v-img
@@ -55,7 +54,7 @@
               <v-card-text class="pb-0">
                 <v-row no-gutters>
                   <v-col
-                    class="text-h4 text-grey-darken-3"
+                    class="text-h4 text-primary"
                     cols="6"
                   >
                     <v-icon color="primary" icon="mdi-thermometer"/>102&deg;F
@@ -63,7 +62,7 @@
                 </v-row>
                 <v-row no-gutters>
                   <v-col
-                    class="text-h4 text-grey-darken-3"
+                    class="text-h4 text-secondary"
                     cols="6"
                   >
                     <v-icon color="secondary" icon="mdi-water"/>45%
@@ -78,7 +77,7 @@
 
           </v-col>
 
-          <v-col cols="12" sm="8">
+          <v-col cols="12" sm="8" class="py-0">
             <AtmosphereCard
               title="Incubator Atmosphere"
               :current-humidity="46.1"
@@ -107,7 +106,9 @@ export default {
 
     return {
       theme,
-      toggleTheme: () => theme.global.name.value = theme.global.current.value.dark ? 'lightTheme' : 'darkTheme'
+      toggleTheme: () => {
+        theme.global.name.value = theme.global.current.value.dark ? 'lightTheme' : 'darkTheme'
+      }
     }
   },
   name: "App",

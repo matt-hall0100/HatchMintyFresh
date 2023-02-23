@@ -17,7 +17,7 @@
 
     <v-expand-transition>
       <div v-if="expand">
-        <Line class="ma-6" :data="data" :options="options" />
+        <Line class="ma-6" :data="data" :options="options" ref="lineChart"/>
       </div>
     </v-expand-transition>
 
@@ -55,8 +55,6 @@ Chart.register(
   Legend,
   Filler
 )
-Chart.defaults.font.size = 14
-// Chart.defaults.backgroundColor = '#ff00ff'
 
 export default {
   name: "AtmosphereCard",
@@ -71,28 +69,12 @@ export default {
   },
   mounted() {
     this.expand = this.startOpen
-      console.log(this.$vuetify.theme.current.colors)
     Chart.defaults.borderColor = this.$vuetify.theme.current.colors['on-surface-variant']
     Chart.defaults.color = this.$vuetify.theme.current.colors["on-background"]
+    Chart.defaults.font.size = 14
   },
   data: () => ({
-    labels: { 0: "SU", 1: "MO", 2: "TU", 3: "WED", 4: "TH", 5: "FR", 6: "SA" },
     expand: false,
-    time: 0,
-    forecast: [
-      {
-        day: "Tuesday",
-        icon: "mdi-white-balance-sunny",
-        temp: "24\xB0/12\xB0",
-      },
-      {
-        day: "Wednesday",
-        icon: "mdi-white-balance-sunny",
-        temp: "22\xB0/14\xB0",
-      },
-      { day: "Thursday", icon: "mdi-cloud", temp: "25\xB0/15\xB0" },
-    ],
-
     data: {
       labels: ["90", "80", "70", "60", "50", "40", "30", "20", "10", "0"],
       datasets: [
