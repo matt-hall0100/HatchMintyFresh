@@ -4,6 +4,7 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <PID_v1.h>
+#include <Ticker.h>
 
 // define GPIO
 #define ZCROSS 5        // pin D1
@@ -16,14 +17,15 @@ DHT updht(UPPERDHTPIN, DHT22);
 DHT lowdht(LOWERDHTPIN, DHT22);
 
 // Create PID Objects
-double Setpoint, Input, Output;
-double Kp = 2, Ki = 5, Kd = 1;
+double Setpoint, Input, Output = 0;
+double Kp = 0.75, Ki = 0.1, Kd = 0;
 PID tempPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 // timer vars
-unsigned long dimmerStartTime = millis();
+Ticker timer;
 unsigned long pidStartTime = millis();
 int counter = 0;
+
 
 /*------------------------------------------------- getAvgTemp -------
 |  Function getAvgTemp
@@ -38,6 +40,7 @@ int counter = 0;
 double getAvgTemp() {
   return ((lowdht.readTemperature(true) + updht.readTemperature(true))/2.0);
 }
+
 
 /*------------------------------------------------- updatePID --------
 |  Function updatePID
@@ -56,13 +59,50 @@ void updatePID() {
   }
 }
 
+
+/*------------------------------------------------- ZeroCross --------
+|  Function ZeroCross
+|
+|  Purpose:  interupt function for the zero crossing givin by the AC
+|            dimmer, PWM output is set low and the timer is schedule
+|            to go high according to the current PID Output.
+|
+|  Parameters: none
+|
+|  Returns:  none
+*-------------------------------------------------------------------*/
 IRAM_ATTR void ZeroCross() {
-  dimmerStartTime = millis();
-  digitalWrite(PWM, LOW);
+  if (Output != 99) {
+    digitalWrite(PWM, LOW);
+    if (Output > 1) {
+      timer1_write(41650-(41650*Output/100.0)); // 8.33 ms max
+    }
+  } 
+  else {
+    digitalWrite(PWM, HIGH);
+  }
+}
+
+
+/*------------------------------------------------- onTime -----------
+|  Function onTime
+|
+|  Purpose:  interupt function for the timer scheduled during the zero
+|            crossing interupt to change the AC PWM dimmer to high
+|
+|  Parameters: none
+|
+|  Returns:  none
+*-------------------------------------------------------------------*/
+IRAM_ATTR void onTime() {
+  digitalWrite(PWM, HIGH);
 }
 
 void setup() {
   Serial.begin(115200);
+  // timer setup
+  timer1_attachInterrupt(onTime); // Add ISR Function
+	timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
 
   // dimmer setup
   pinMode(PWM, OUTPUT);
@@ -76,8 +116,8 @@ void setup() {
   // PID setup
   Setpoint = 99.5;
   Input = getAvgTemp();
-  tempPID.SetOutputLimits(0, 100);
-  tempPID.SetSampleTime(1000);
+  tempPID.SetOutputLimits(0, 99);
+  tempPID.SetSampleTime(500);
   tempPID.SetMode(AUTOMATIC);
 }
 
@@ -90,11 +130,8 @@ void loop() {
     Serial.print(Input);
     counter = 0;
   }
-  if(millis() - pidStartTime >= 1000) {
+  if(millis() - pidStartTime >= 500) {
     updatePID();
     counter++;
-  }
-  if(millis() - dimmerStartTime >= (((100-Output)/100.0)*8.33)) {
-    digitalWrite(PWM, HIGH);
   }
 }
