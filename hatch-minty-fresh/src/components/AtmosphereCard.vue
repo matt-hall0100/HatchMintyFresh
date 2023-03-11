@@ -44,6 +44,9 @@
 </template>
 
 <script>
+import { db } from "@/plugins/firebase"
+import { ref, onValue} from "firebase/database"
+
 export default {
   name: "AtmosphereCard",
   props: {
@@ -64,19 +67,24 @@ export default {
       return Math.floor((Math.random() * (max - min)) + min);
     },
     setDataLineChart() {
-      setInterval(() => {
-        this.series[0].data.splice(0, 1);
-        this.series[1].data.splice(0, 1);
-        this.series[0].data.push({
-          x: new Date(),
-          y: this.getRandomArbitrary(30, 35),
-        });
-        this.series[1].data.push({
-          x: new Date(),
-          y: this.getRandomArbitrary(77, 88),
-        });
-        this.$refs.realtimeChart.updateSeries(this.series, true, true);
-      }, 3000);
+      const tempRef = ref(db, 'temp');
+      onValue(tempRef, (snapshot) => {
+        const data = snapshot.val();
+
+        var updatedTemp = []
+        var updatedHum = []
+
+        for (const [key, value] of Object.entries(data)) {
+          updatedTemp.push({x: new Date(0).setUTCSeconds(key), y: value})
+          updatedHum.push({x: new Date(0).setUTCSeconds(key), y: value / 2.0})
+        }
+
+        this.series[0].data = updatedHum
+        this.series[1].data = updatedTemp
+        if(this.$refs.realtimeChart) {
+          this.$refs.realtimeChart.updateSeries(this.series, true, true);
+        }
+      });
     },
   },
   data: () => ({
@@ -85,27 +93,11 @@ export default {
     series: [
       {
         name: "Humidity",
-        data: [
-          { x: new Date().setSeconds(new Date().getSeconds() - 15), y: 31 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 12), y: 40 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 9), y: 28 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 6), y: 51 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 3), y: 42 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 2), y: 109 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 1), y: 100 },
-        ],
+        data: [],
       },
       {
         name: "Temperature",
-        data: [
-          { x: new Date().setSeconds(new Date().getSeconds() - 15), y: 11 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 12), y: 32 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 9), y: 45 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 6), y: 32 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 3), y: 34 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 2), y: 52 },
-          { x: new Date().setSeconds(new Date().getSeconds() - 1), y: 41 },
-        ],
+        data: [],
       },
     ],
 
@@ -172,6 +164,7 @@ export default {
             style: {
               colors: "#a0a0a0",
             },
+            formatter: (v) => { return Math.floor(v) },
           },
         },
         {
@@ -194,6 +187,7 @@ export default {
             style: {
               colors: "#a0a0a0",
             },
+            formatter: (v) => { return Math.floor(v) },
           },
         },
       ],

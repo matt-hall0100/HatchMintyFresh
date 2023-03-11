@@ -27,28 +27,13 @@
       <v-toolbar-title class="ml-1 text-h5 font-weight-bold">
         Hatch Minty Fresh
       </v-toolbar-title>
-      <v-btn @click="toggleTheme(); updateCharts()" icon="mdi-brightness-6"></v-btn>
+      <v-btn @click="toggleTheme()" icon="mdi-brightness-6"></v-btn>
     </v-app-bar>
 
     <v-main class="grey lighten-3">
       <v-container>
         <v-row>
           <v-col cols="12" sm="4" class="py-0">
-
-            <v-card class="bg-background elevation-8 mb-6">
-              <v-img
-                src="https://bdn-ss-hh.s3.amazonaws.com/uploads/2019/08/BabyQuail4.jpg"
-                class="align-end"
-                gradient="to bottom, #00000000, #00000000 80%, #000000bb"
-                cover
-              >
-                <v-card-title class="text-white">
-                    <v-icon color="red" icon="mdi-circle-medium"/>Live
-                </v-card-title>
-              </v-img>
-            </v-card>
-
-
             <v-card class="bg-background elevation-8 mb-6">
               <v-card-item title="Current Target Settings"> </v-card-item>
               <v-card-text class="pb-0">
@@ -108,6 +93,7 @@ export default {
       theme,
       toggleTheme: () => {
         theme.global.name.value = theme.global.current.value.dark ? 'lightTheme' : 'darkTheme'
+        document.querySelector('meta[name="theme-color"]').setAttribute('content',  theme.current.value.colors.surface)
       }
     }
   },
