@@ -5,25 +5,38 @@
     <v-card-text class="pb-0">
       <v-row no-gutters>
         <v-col class="text-h4 text-primary" cols="6">
-          <v-icon color="primary" icon="mdi-thermometer"/>{{ currentTemperature }}&deg;F
+          <v-icon color="primary" icon="mdi-thermometer" />{{
+            currentTemperature
+          }}&deg;F
         </v-col>
       </v-row>
       <v-row no-gutters>
         <v-col class="text-h4 text-secondary" cols="6">
-          <v-icon color="secondary" icon="mdi-water"/>{{ currentHumidity }}%
+          <v-icon color="secondary" icon="mdi-water" />{{ currentHumidity }}%
         </v-col>
       </v-row>
     </v-card-text>
 
     <v-expand-transition>
       <div v-if="expand">
-        <Line class="ma-6" :data="data" :options="options" ref="lineChart"/>
+        <div id="chart">
+          <apexchart
+            type="area"
+            height="350"
+            ref="realtimeChart"
+            :options="chartOptions"
+            :series="series"
+          ></apexchart>
+        </div>
       </div>
     </v-expand-transition>
 
     <v-card-actions>
       <v-spacer></v-spacer>
-      <v-btn @click="expand = !expand" prepend-icon="mdi-chart-timeline-variant-shimmer">
+      <v-btn
+        @click="expand = !expand"
+        prepend-icon="mdi-chart-timeline-variant-shimmer"
+      >
         {{ !expand ? "Show History" : "Hide History" }}
       </v-btn>
     </v-card-actions>
@@ -31,31 +44,6 @@
 </template>
 
 <script>
-import { lightTheme } from "@/plugins/vuetify";
-import {
-  Chart,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Line } from "vue-chartjs";
-
-Chart.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-)
-
 export default {
   name: "AtmosphereCard",
   props: {
@@ -68,90 +56,161 @@ export default {
     },
   },
   mounted() {
-    this.expand = this.startOpen
-    Chart.defaults.borderColor = this.$vuetify.theme.current.colors['on-surface-variant']
-    Chart.defaults.color = this.$vuetify.theme.current.colors["on-background"]
-    Chart.defaults.font.size = 14
+    this.expand = this.startOpen;
+    this.setDataLineChart();
+  },
+  methods: {
+    getRandomArbitrary(min, max) {
+      return Math.floor((Math.random() * (max - min)) + min);
+    },
+    setDataLineChart() {
+      setInterval(() => {
+        this.series[0].data.splice(0, 1);
+        this.series[1].data.splice(0, 1);
+        this.series[0].data.push({
+          x: new Date(),
+          y: this.getRandomArbitrary(30, 35),
+        });
+        this.series[1].data.push({
+          x: new Date(),
+          y: this.getRandomArbitrary(77, 88),
+        });
+        this.$refs.realtimeChart.updateSeries(this.series, true, true);
+      }, 3000);
+    },
   },
   data: () => ({
     expand: false,
-    data: {
-      labels: ["90", "80", "70", "60", "50", "40", "30", "20", "10", "0"],
-      datasets: [
+
+    series: [
+      {
+        name: "Humidity",
+        data: [
+          { x: new Date().setSeconds(new Date().getSeconds() - 15), y: 31 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 12), y: 40 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 9), y: 28 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 6), y: 51 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 3), y: 42 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 2), y: 109 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 1), y: 100 },
+        ],
+      },
+      {
+        name: "Temperature",
+        data: [
+          { x: new Date().setSeconds(new Date().getSeconds() - 15), y: 11 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 12), y: 32 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 9), y: 45 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 6), y: 32 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 3), y: 34 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 2), y: 52 },
+          { x: new Date().setSeconds(new Date().getSeconds() - 1), y: 41 },
+        ],
+      },
+    ],
+
+    chartOptions: {
+      legend: {
+        show: true,
+        labels: {
+          useSeriesColors: true,
+        },
+      },
+      chart: {
+        height: 350,
+        type: "area",
+        toolbar: {
+          show: true,
+          tools: {
+            download: false,
+            selection: false,
+            zoom: false,
+            zoomin: true,
+            zoomout: true,
+            pan: true,
+            reset: true,
+          },
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      stroke: {
+        curve: "smooth",
+      },
+      xaxis: {
+        type: "datetime",
+        labels: {
+          datetimeFormatter: {
+            year: "yyyy",
+            month: "MMM 'yy",
+            day: "dd MMM",
+            hour: "h:mm TT",
+          },
+          style: {
+            colors: "#a0a0a0",
+          },
+        },
+      },
+      yaxis: [
         {
-          label: "Humidity",
-          cubicInterpolationMode: "monotone",
-          fill: true,
-          data: [30.8, 30.9, 31.2, 32.8, 36.4, 41.5, 44.8, 45.7, 45.9, 46.1],
-          borderColor: lightTheme.colors.secondary,
-          backgroundColor: lightTheme.colors.secondaryOpaqueFill,
-          yAxisID: "y1",
-          pointRadius: 0,
+          max: 75,
+          min: 25,
+          axisTicks: {
+            show: true,
+          },
+          axisBorder: {
+            show: true,
+          },
+          title: {
+            text: "Humidity (%)",
+            style: {
+              color: "#008ffb",
+            },
+          },
+          labels: {
+            style: {
+              colors: "#a0a0a0",
+            },
+          },
         },
         {
-          label: "Temperature",
-          cubicInterpolationMode: "monotone",
-          fill: true,
-          data: [70.7, 71.3, 76.1, 84.4, 93.1, 97.5, 99.3, 99.9, 100.3, 100.1],
-          borderColor: lightTheme.colors.primary,
-          backgroundColor: lightTheme.colors.primaryOpaqueFill,
-          yAxisID: "y",
-          pointRadius: 0,
+          max: 110,
+          min: 55,
+          opposite: true,
+          axisTicks: {
+            show: true,
+          },
+          axisBorder: {
+            show: true,
+          },
+          title: {
+            text: "Temperature (°F)",
+            style: {
+              color: "#00e396",
+            },
+          },
+          labels: {
+            style: {
+              colors: "#a0a0a0",
+            },
+          },
         },
       ],
-    },
-    options: {
-      plugins: {
-        legend: {
-          labels: {
-            usePointStyle: true,
-          },
-        },
-      },
-      responsive: true,
-      interaction: {
-        mode: "index",
-        intersect: false,
-      },
-      scales: {
+      tooltip: {
+        shared: true,
         x: {
-          title: {
-            display: true,
-            text: "Minutes Ago",
-          },
+          format: "MMM dd yyyy h:mm:ss TT",
         },
-        y: {
-          type: "linear",
-          display: true,
-          position: "left",
-          title: {
-            display: true,
-            text: "Temperature (°F)",
-          },
-          min: 65,
-          max: 110,
-        },
-        y1: {
-          type: "linear",
-          display: true,
-          position: "right",
-          title: {
-            display: true,
-            text: "Humidity (%)",
-          },
-          suggestedMin: 25,
-          suggestedMax: 75,
-
-          // grid line settings
-          grid: {
-            drawOnChartArea: false, // only want the grid lines for one axis to show up
+      },
+      grid: {
+        xaxis: {
+          lines: {
+            show: true,
           },
         },
       },
     },
   }),
-  components: {
-    Line,
-  },
 };
 </script>
