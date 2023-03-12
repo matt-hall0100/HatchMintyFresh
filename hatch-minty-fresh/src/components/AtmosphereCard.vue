@@ -4,15 +4,15 @@
 
     <v-card-text class="pb-0">
       <v-row no-gutters>
-        <v-col class="text-h4 text-primary" cols="6">
+        <v-col class="text-h5 text-primary">
           <v-icon color="primary" icon="mdi-thermometer" />{{
-            currentTemperature
+            parseFloat(currentTemperature.toFixed(2))
           }}&deg;F
         </v-col>
       </v-row>
       <v-row no-gutters>
-        <v-col class="text-h4 text-secondary" cols="6">
-          <v-icon color="secondary" icon="mdi-water" />{{ currentHumidity }}%
+        <v-col class="text-h5 text-secondary">
+          <v-icon color="secondary" icon="mdi-water" />{{ parseFloat(currentHumidity.toFixed(2)) }}%
         </v-col>
       </v-row>
     </v-card-text>
@@ -51,8 +51,6 @@ export default {
   name: "AtmosphereCard",
   props: {
     title: String,
-    currentTemperature: Number,
-    currentHumidity: Number,
     startOpen: {
       type: Boolean,
       default: false,
@@ -71,6 +69,9 @@ export default {
       onValue(tempRef, (snapshot) => {
         const data = snapshot.val();
 
+        var latest = Object.keys(data).reduce(function(a, b){ return a > b ? a : b })
+        this.currentTemperature = data[latest]
+
         var updatedTemp = []
         var updatedHum = []
 
@@ -79,8 +80,8 @@ export default {
           updatedHum.push({x: new Date(0).setUTCSeconds(key), y: value / 2.0})
         }
 
-        this.series[0].data = updatedHum
-        this.series[1].data = updatedTemp
+        this.series[1].data = updatedHum
+        this.series[0].data = updatedTemp
         if(this.$refs.realtimeChart) {
           this.$refs.realtimeChart.updateSeries(this.series, true, true);
         }
@@ -89,19 +90,22 @@ export default {
   },
   data: () => ({
     expand: false,
+    currentTemperature: 0,
+    currentHumidity: 0,
 
     series: [
       {
-        name: "Humidity",
+        name: "Temperature",
         data: [],
       },
       {
-        name: "Temperature",
+        name: "Humidity",
         data: [],
       },
     ],
 
     chartOptions: {
+      colors: ['#00e396', '#008ffb', '#546E7A', '#E91E63', '#FF9800'],
       legend: {
         show: true,
         labels: {
@@ -116,7 +120,7 @@ export default {
           tools: {
             download: false,
             selection: false,
-            zoom: false,
+            zoom: true,
             zoomin: true,
             zoomout: true,
             pan: true,
@@ -146,36 +150,16 @@ export default {
       },
       yaxis: [
         {
-          max: 75,
-          min: 25,
-          axisTicks: {
-            show: true,
-          },
-          axisBorder: {
-            show: true,
-          },
-          title: {
-            text: "Humidity (%)",
-            style: {
-              color: "#008ffb",
-            },
-          },
-          labels: {
-            style: {
-              colors: "#a0a0a0",
-            },
-            formatter: (v) => { return Math.floor(v) },
-          },
-        },
-        {
           max: 110,
           min: 55,
           opposite: true,
           axisTicks: {
             show: true,
+            color: "#00e396",
           },
           axisBorder: {
             show: true,
+            color: "#00e396",
           },
           title: {
             text: "Temperature (°F)",
@@ -185,7 +169,33 @@ export default {
           },
           labels: {
             style: {
-              colors: "#a0a0a0",
+              colors: "#00e396",
+              fontWeight: 600,
+            },
+            formatter: (v) => { return Math.floor(v) },
+          },
+        },
+        {
+          max: 75,
+          min: 25,
+          axisTicks: {
+            show: true,
+            color: "#008ffb",
+          },
+          axisBorder: {
+            show: true,
+            color: "#008ffb",
+          },
+          title: {
+            text: "Humidity (%)",
+            style: {
+              color: "#008ffb",
+            },
+          },
+          labels: {
+            style: {
+              colors: "#008ffb",
+              fontWeight: 600,
             },
             formatter: (v) => { return Math.floor(v) },
           },
@@ -193,8 +203,12 @@ export default {
       ],
       tooltip: {
         shared: true,
+        theme: "dark",
         x: {
           format: "MMM dd yyyy h:mm:ss TT",
+        },
+        y: {
+            formatter: (value) => {return parseFloat(value.toFixed(2))},
         },
       },
       grid: {

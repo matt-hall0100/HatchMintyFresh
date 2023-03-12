@@ -34,45 +34,18 @@
       <v-container>
         <v-row>
           <v-col cols="12" sm="4" class="py-0">
-            <v-card class="bg-background elevation-8 mb-6">
-              <v-card-item title="Current Target Settings"> </v-card-item>
-              <v-card-text class="pb-0">
-                <v-row no-gutters>
-                  <v-col
-                    class="text-h4 text-primary"
-                    cols="6"
-                  >
-                    <v-icon color="primary" icon="mdi-thermometer"/>102&deg;F
-                  </v-col>
-                </v-row>
-                <v-row no-gutters>
-                  <v-col
-                    class="text-h4 text-secondary"
-                    cols="6"
-                  >
-                    <v-icon color="secondary" icon="mdi-water"/>45%
-                  </v-col>
-                </v-row>
-              </v-card-text>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="primary" icon="mdi-cog"></v-btn>
-              </v-card-actions>
-            </v-card>
+            <TargetSettings/>
+            
+            <AtmosphereCard
+              title="External Atmosphere"
+            />
 
           </v-col>
 
           <v-col cols="12" sm="8" class="py-0">
             <AtmosphereCard
               title="Incubator Atmosphere"
-              :current-humidity="46.1"
-              :current-temperature="100.1"
               :start-open="true"
-            />
-            <AtmosphereCard
-              title="External Atmosphere"
-              :current-humidity="46.1"
-              :current-temperature="70.2"
             />
           </v-col>
         </v-row>
@@ -83,6 +56,7 @@
 
 <script>
 import AtmosphereCard from "@/components/AtmosphereCard.vue"
+import TargetSettings from "@/components/TargetSettings.vue"
 import { useTheme } from 'vuetify'
 
 export default {
@@ -108,6 +82,7 @@ export default {
   },
   components: {
     AtmosphereCard,
+    TargetSettings,
   },
 };
 </script>
