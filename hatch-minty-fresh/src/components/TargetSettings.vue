@@ -1,6 +1,6 @@
 <template>
   <v-card class="bg-background elevation-8 mb-6 rounded-xl pa-1">
-    <v-card-item title="Incubator Settings"> </v-card-item>
+    <v-card-item title="Target Settings"> </v-card-item>
     <v-card-text>
       <v-row no-gutters>
         <v-col class="text-h4 text-primary w-100">
