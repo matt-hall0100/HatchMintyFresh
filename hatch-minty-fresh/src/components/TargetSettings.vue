@@ -28,7 +28,11 @@
         <template v-slot:activator="{ props }">
           <v-btn color="primary" icon="mdi-cog" v-bind="props"></v-btn>
         </template>
-        <v-card class="rounded-xl mt-5 elevation-10" color="background">
+        <v-card
+          v-touch="{ down: () => (dialog = false) }"
+          class="rounded-xl mt-5 elevation-10"
+          color="background"
+        >
           <v-toolbar color="background">
             <v-btn icon color="primary" @click="dialog = false">
               <v-icon>mdi-arrow-left</v-icon>
@@ -165,13 +169,13 @@ import { db } from "@/plugins/firebase";
 import { ref, onValue, set } from "firebase/database";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-const auth = getAuth()
-const allowedUsersRef = ref(db, "AllowedUsers")
-const targetHumRef = ref(db, "Configurable/TargetHum")
-const targetTempRef = ref(db, "Configurable/TargetTemp")
-const tempKpRef = ref(db, "PIDTuning/tempKp")
-const tempKiRef = ref(db, "PIDTuning/tempKi")
-const tempKdRef = ref(db, "PIDTuning/tempKd")
+const auth = getAuth();
+const allowedUsersRef = ref(db, "AllowedUsers");
+const targetHumRef = ref(db, "Configurable/TargetHum");
+const targetTempRef = ref(db, "Configurable/TargetTemp");
+const tempKpRef = ref(db, "PIDTuning/tempKp");
+const tempKiRef = ref(db, "PIDTuning/tempKi");
+const tempKdRef = ref(db, "PIDTuning/tempKd");
 
 export default {
   name: "TargetSettings",
@@ -197,25 +201,25 @@ export default {
       } else {
         this.user = null;
       }
-    })
+    });
     onValue(allowedUsersRef, (snapshot) => {
-      this.allowedUsers = snapshot.val().emails.split(",")
-    })
+      this.allowedUsers = snapshot.val().emails.split(",");
+    });
     onValue(targetHumRef, (snapshot) => {
-      this.target.humidity = snapshot.val()
-    })
+      this.target.humidity = snapshot.val();
+    });
     onValue(targetTempRef, (snapshot) => {
-      this.target.temperature = snapshot.val()
-    })
+      this.target.temperature = snapshot.val();
+    });
     onValue(tempKpRef, (snapshot) => {
-      this.pid.p = snapshot.val()
-    })
+      this.pid.p = snapshot.val();
+    });
     onValue(tempKiRef, (snapshot) => {
-      this.pid.i = snapshot.val()
-    })
+      this.pid.i = snapshot.val();
+    });
     onValue(tempKdRef, (snapshot) => {
-      this.pid.d = snapshot.val()
-    })
+      this.pid.d = snapshot.val();
+    });
   },
   methods: {
     verifyCombo() {
@@ -251,19 +255,19 @@ export default {
       set(allowedUsersRef, { emails: this.allowedUsers.join(",") });
     },
     updateTargetTemperature() {
-      set(targetTempRef, this.target.temperature)
+      set(targetTempRef, this.target.temperature);
     },
     updateTargetHumidity() {
-      set(targetHumRef, this.target.humidity)
+      set(targetHumRef, this.target.humidity);
     },
     updatePidP() {
-      set(tempKpRef, this.pid.p)
+      set(tempKpRef, this.pid.p);
     },
     updatePidI() {
-      set(tempKiRef, this.pid.i)
+      set(tempKiRef, this.pid.i);
     },
     updatePidD() {
-      set(tempKdRef, this.pid.d)
+      set(tempKdRef, this.pid.d);
     },
   },
 };
