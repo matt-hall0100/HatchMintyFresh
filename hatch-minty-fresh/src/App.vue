@@ -1,52 +1,116 @@
 <template>
   <v-app class="bg-surface">
-    <v-navigation-drawer
-      disable-resize-watcher
-      disable-route-watcher
-      class="bg-background"
-      v-model="drawer"
-    >
-    </v-navigation-drawer>
-
     <v-app-bar>
-      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <v-img
         v-if="!isDark"
         src="@/assets/logo.svg"
-        max-height="64"
-        max-width="64"
+        max-height="54"
+        max-width="54"
         contain
+        class="ml-4"
       />
       <v-img
         v-if="isDark"
         src="@/assets/logo_dark.svg"
-        max-height="64"
-        max-width="64"
+        max-height="54"
+        max-width="54"
         contain
+        class="ml-4"
       />
-      <v-toolbar-title class="ml-1 text-h5 font-weight-bold">
+      <v-toolbar-title class="mx-1 text-h5 font-weight-bold">
         Hatch Minty Fresh
       </v-toolbar-title>
       <v-btn @click="toggleTheme()" icon="mdi-brightness-6"></v-btn>
+
+      <span v-cloak>
+        <span v-if="!user">
+          <v-btn
+          v-cloak
+            class="mx-2"
+            @click="signIn()"
+            v-if="!this.$vuetify.display.smAndDown"
+            variant="tonal"
+            prepend-icon="mdi-login"
+          >
+            Sign In
+          </v-btn>
+          <v-btn
+            class="mr-2"
+            @click="signIn()"
+            v-if="this.$vuetify.display.smAndDown"
+            icon="mdi-login"
+          ></v-btn>
+        </span>
+        <v-menu open-on-hover :close-on-content-click="false" v-if="user">
+          <template v-slot:activator="{ props }">
+            <v-avatar class="mx-2" v-bind="props">
+              <v-img
+                :src="user.photoURL"
+              ></v-img>
+            </v-avatar>
+          </template>
+
+          <v-card class="rounded-xl" min-width="300px">
+            <v-list class="pa-2">
+              <v-list-item
+                class="rounded-t-xl rounded-b mb-1 pa-3"
+                variant="tonal"
+                lines="three"
+              >
+                <template v-slot:prepend>
+                  <v-avatar
+                    class="mt-1"
+                    size="x-large"
+                    :image="user.photoURL"
+                  ></v-avatar>
+                </template>
+
+                <v-list-item-title>{{ user.displayName.split("/d/")[0] }}</v-list-item-title>
+
+                <v-list-item-subtitle>{{ user.email }}</v-list-item-subtitle>
+              </v-list-item>
+
+              <v-btn
+                class="rounded-b-xl rounded-t w-100 sign-out-btn"
+                @click="signOut()"
+                variant="tonal"
+                prepend-icon="mdi-login"
+                color="grey-darken"
+              >
+                Sign Out
+              </v-btn>
+              
+              <v-btn
+                variant="plain"
+                color="onBackground"
+                @click="deleteUser()"
+                class="
+                  d-flex
+                  px-0
+                  ma-auto
+                  text-none
+                  font-weight-light
+                  text-caption
+                "
+              >
+                Delete account
+              </v-btn>
+            </v-list>
+          </v-card>
+        </v-menu>
+      </span>
+
     </v-app-bar>
 
-    <v-main class="grey lighten-3">
+    <v-main class="grey lighten-3 mt-2">
       <v-container>
         <v-row>
           <v-col cols="12" sm="4" class="py-0">
-            <TargetSettings/>
-            
-            <AtmosphereCard
-              title="External Atmosphere"
-            />
-
+            <TargetSettings />
           </v-col>
 
           <v-col cols="12" sm="8" class="py-0">
-            <AtmosphereCard
-              title="Incubator Atmosphere"
-              :start-open="true"
-            />
+            <AtmosphereCard title="Current Incubator Atmosphere" db-path="temp" />
           </v-col>
         </v-row>
       </v-container>
@@ -57,34 +121,96 @@
 <script>
 import AtmosphereCard from "@/components/AtmosphereCard.vue"
 import TargetSettings from "@/components/TargetSettings.vue"
-import { useTheme } from 'vuetify'
+import { useTheme } from "vuetify"
+import { getAuth, signInWithPopup, signOut, deleteUser, GoogleAuthProvider, onAuthStateChanged, updateProfile } from "firebase/auth"
+
+const provider = new GoogleAuthProvider()
+const auth = getAuth()
 
 export default {
-  setup () {
+  setup() {
     const theme = useTheme()
 
     return {
       theme,
       toggleTheme: () => {
-        theme.global.name.value = theme.global.current.value.dark ? 'lightTheme' : 'darkTheme'
-        document.querySelector('meta[name="theme-color"]').setAttribute('content',  theme.current.value.colors.surface)
-      }
-    }
+        theme.global.name.value = theme.global.current.value.dark
+          ? "lightTheme"
+          : "darkTheme";
+        document
+          .querySelector('meta[name="theme-color"]')
+          .setAttribute("content", theme.current.value.colors.surface)
+
+        var name = getAuth().currentUser.displayName
+        name = name.split("/d/")
+        name = name.join("")
+        if(theme.global.current.value.dark) {
+          updateProfile(auth.currentUser, {
+            displayName: name + "/d/"
+          }).then(() => {}).catch((error) => {
+            console.log(error)
+          })
+        }
+        else {
+          updateProfile(auth.currentUser, {
+            displayName: name
+          }).then(() => {}).catch((error) => {
+            console.log(error)
+          })
+        }
+      },
+    };
   },
   name: "App",
   data: () => ({
-    drawer: false,
+    deleteAccountDialog: false,
+    user: null,
+    displayName: "",
   }),
+  mounted() {
+    onAuthStateChanged(auth, (user) => {
+      if (user != null) {
+        this.user = user
+        if(user.displayName.includes("/d/") && !this.$vuetify.theme.current.dark) {
+          this.toggleTheme()
+        }
+        else if(!user.displayName.includes("/d/") && this.$vuetify.theme.current.dark) {
+          this.toggleTheme()
+        }
+      }
+      else {
+        this.user = null
+      }
+    });
+  },
   computed: {
     isDark() {
-      return this.$vuetify.theme.current.dark
-    }
+      return this.$vuetify.theme.current.dark;
+    },
   },
   components: {
     AtmosphereCard,
     TargetSettings,
   },
-};
+  methods: {
+    signIn() {
+      signInWithPopup(auth, provider).then(() => {}).catch((error) => {
+        console.log(error)
+      })
+    },
+    signOut() {
+      console.log(auth)
+      this.user = null
+      signOut(auth)
+      console.log(auth)
+    },
+    deleteUser() {
+      deleteUser(this.user).then(() => {}).catch((error) => {
+        console.log(error)
+      })
+    },
+  },
+}
 </script>
 
 <style>
@@ -94,8 +220,10 @@ export default {
 ::-moz-selection {
   background: rgb(var(--v-theme-secondary));
 }
-
 .v-toolbar-title {
+  color: rgb(var(--v-theme-primary));
+}
+.sign-out-btn:hover {
   color: rgb(var(--v-theme-primary));
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <v-card class="bg-background elevation-8 mb-6">
+  <v-card class="bg-background elevation-8 mb-6 rounded-xl pa-1">
     <v-card-item :title="title"> </v-card-item>
 
     <v-card-text class="pb-0">
@@ -17,29 +17,15 @@
       </v-row>
     </v-card-text>
 
-    <v-expand-transition>
-      <div v-if="expand">
-        <div id="chart">
-          <apexchart
-            type="area"
-            height="350"
-            ref="realtimeChart"
-            :options="chartOptions"
-            :series="series"
-          ></apexchart>
-        </div>
-      </div>
-    </v-expand-transition>
-
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn
-        @click="expand = !expand"
-        prepend-icon="mdi-chart-timeline-variant-shimmer"
-      >
-        {{ !expand ? "Show History" : "Hide History" }}
-      </v-btn>
-    </v-card-actions>
+    <div id="chart" class="ma-2">
+      <apexchart
+        type="area"
+        height="350"
+        ref="realtimeChart"
+        :options="chartOptions"
+        :series="series"
+      ></apexchart>
+    </div>
   </v-card>
 </template>
 
@@ -51,19 +37,12 @@ export default {
   name: "AtmosphereCard",
   props: {
     title: String,
-    startOpen: {
-      type: Boolean,
-      default: false,
-    },
+    dbPath: String,
   },
   mounted() {
-    this.expand = this.startOpen;
     this.setDataLineChart();
   },
   methods: {
-    getRandomArbitrary(min, max) {
-      return Math.floor((Math.random() * (max - min)) + min);
-    },
     setDataLineChart() {
       const tempRef = ref(db, 'temp');
       onValue(tempRef, (snapshot) => {
@@ -89,7 +68,6 @@ export default {
     },
   },
   data: () => ({
-    expand: false,
     currentTemperature: 0,
     currentHumidity: 0,
 
