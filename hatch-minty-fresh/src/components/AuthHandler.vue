@@ -83,11 +83,19 @@
 </template>
 
 <script>
-import { useTheme } from "vuetify"
-import { getAuth, signInWithPopup, signOut, deleteUser, GoogleAuthProvider, onAuthStateChanged, updateProfile } from "firebase/auth"
+import { useTheme } from "vuetify";
+import {
+  getAuth,
+  signInWithPopup,
+  signOut,
+  deleteUser,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  updateProfile,
+} from "firebase/auth";
 
-const provider = new GoogleAuthProvider()
-const auth = getAuth()
+const provider = new GoogleAuthProvider();
+const auth = getAuth();
 
 export default {
   name: "AuthHandler",
@@ -104,25 +112,34 @@ export default {
           .querySelector('meta[name="theme-color"]')
           .setAttribute("content", theme.current.value.colors.surface);
 
-        var name = getAuth().currentUser.displayName;
-        name = name.split("/d/");
-        name = name.join("");
         if (theme.global.current.value.dark) {
-          updateProfile(auth.currentUser, {
-            displayName: name + "/d/",
-          })
-            .then(() => {})
-            .catch((error) => {
-              console.log(error);
-            });
+          localStorage.setItem("theme", "dark");
         } else {
-          updateProfile(auth.currentUser, {
-            displayName: name,
-          })
-            .then(() => {})
-            .catch((error) => {
-              console.log(error);
-            });
+          localStorage.setItem("theme", "light");
+        }
+
+        var user = getAuth().currentUser;
+        if (user) {
+          var name = user.displayName;
+          name = name.split("/d/");
+          name = name.join("");
+          if (theme.global.current.value.dark) {
+            updateProfile(auth.currentUser, {
+              displayName: name + "/d/",
+            })
+              .then(() => {})
+              .catch((error) => {
+                console.log(error);
+              });
+          } else {
+            updateProfile(auth.currentUser, {
+              displayName: name,
+            })
+              .then(() => {})
+              .catch((error) => {
+                console.log(error);
+              });
+          }
         }
       },
     };
@@ -133,6 +150,9 @@ export default {
     displayName: "",
   }),
   mounted() {
+    if (localStorage.getItem("theme") == "dark") {
+      this.toggleTheme();
+    }
     onAuthStateChanged(auth, (user) => {
       if (user != null) {
         this.user = user;
