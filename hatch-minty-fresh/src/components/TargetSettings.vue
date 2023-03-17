@@ -24,6 +24,7 @@
         :scrim="false"
         transition="dialog-bottom-transition"
         class="mt-5"
+        close-on-back
       >
         <template v-slot:activator="{ props }">
           <v-btn color="primary" icon="mdi-cog" v-bind="props"></v-btn>
@@ -47,6 +48,7 @@
               <v-list-item-title>Target Temperature</v-list-item-title>
               <v-list-item-subtitle class="pa-0">
                 <v-slider
+                  @touchstart.stop
                   :disabled="!allowedUsers.includes(user.email)"
                   v-model="target.temperature"
                   :max="110"
@@ -79,6 +81,7 @@
 
               <v-list-item-subtitle class="pa-0">
                 <v-slider
+                  @touchstart.stop
                   :disabled="!allowedUsers.includes(user.email)"
                   v-model="target.humidity"
                   :max="60"

@@ -1,6 +1,14 @@
 <template>
   <span>
-    <v-btn @click="toggleTheme()" icon="mdi-brightness-6"></v-btn>
+    <v-tooltip
+      location="bottom"
+      text="Toggle theme"
+      open-delay="750"
+    >
+      <template v-slot:activator="{ props }">
+        <v-btn v-bind="props" @click="toggleTheme()" icon="mdi-brightness-6"></v-btn>
+      </template>
+    </v-tooltip>
 
     <span v-cloak>
       <span v-if="!user">
@@ -21,7 +29,7 @@
           icon="mdi-login"
         ></v-btn>
       </span>
-      <v-menu open-on-hover :close-on-content-click="false" v-if="user">
+      <v-menu open-on-hover open-delay="25" :close-on-content-click="false" v-if="user">
         <template v-slot:activator="{ props }">
           <v-avatar class="mx-2" v-bind="props">
             <v-img :src="user.photoURL"></v-img>
