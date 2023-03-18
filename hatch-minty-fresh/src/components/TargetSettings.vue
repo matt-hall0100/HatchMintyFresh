@@ -162,30 +162,55 @@
                 </v-combobox>
               </v-list-item>
             </v-list-group>
+            <v-list-item
+              title="Save data"
+              subtitle="Download all chart temperature and humidity history"
+              lines="two"
+              prepend-icon="mdi-content-save-all"
+              @click="saveData()"
+            ></v-list-item>
             <v-dialog v-model="deleteDialog" width="auto">
               <template v-slot:activator="{ props }">
                 <v-list-item
                   v-bind="props"
                   title="Delete data"
-                  subtitle="Erase all the chart temperature and humidity history"
+                  subtitle="Erase all chart temperature and humidity history"
                   lines="two"
                   prepend-icon="mdi-trash-can-outline"
                   :disabled="!allowedUsers.includes(user.email)"
                 ></v-list-item>
               </template>
               <v-card class="rounded-xl pa-1" max-width="650px">
-                <v-card-title><v-icon color="error" icon="mdi-alert" /><span class="pa-4">Warning: Irreversible Action</span></v-card-title>
+                <v-card-title
+                  ><v-icon color="error" icon="mdi-alert" /><span class="pa-4"
+                    >Warning: Irreversible Action</span
+                  ></v-card-title
+                >
                 <v-card-text>
-                  You are about to delete all historical temperature and humidity data currently saved in the database.
-                  This data cannot be recovered once deleted. Are you sure you want to delete all data?
+                  You are about to delete all historical temperature and
+                  humidity data currently saved in the database. This data
+                  cannot be recovered once deleted. Are you sure you want to
+                  delete all data?
                 </v-card-text>
                 <v-card-actions>
                   <v-row class="ma-0 pa-0">
                     <v-col>
-                      <v-btn variant="tonal" color="error" block @click="deleteAtmHist()">Confirm Deletion</v-btn>
+                      <v-btn
+                        variant="tonal"
+                        color="error"
+                        block
+                        @click="deleteAtmHist()"
+                        >Confirm Deletion</v-btn
+                      >
                     </v-col>
                     <v-col>
-                      <v-btn variant="tonal" color="primary" block @click="deleteDialog = false">Cancel</v-btn>
+                      <v-btn
+                        variant="tonal"
+                        color="primary"
+                        block
+                        @click="deleteDialog = false"
+                        >Cancel</v-btn
+                      >
                     </v-col>
                   </v-row>
                 </v-card-actions>
@@ -200,7 +225,7 @@
 
 <script>
 import { db } from "@/plugins/firebase";
-import { ref, onValue, set, remove } from "firebase/database";
+import { ref, onValue, set, remove, get } from "firebase/database";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import LineLoader from "@/components/LineLoader.vue";
 
@@ -211,7 +236,7 @@ const targetTempRef = ref(db, "Configurable/TargetTemp");
 const tempKpRef = ref(db, "PIDTuning/tempKp");
 const tempKiRef = ref(db, "PIDTuning/tempKi");
 const tempKdRef = ref(db, "PIDTuning/tempKd");
-const atmRef = ref(db, "IncubatorAtmosphere")
+const atmRef = ref(db, "IncubatorAtmosphere");
 
 export default {
   name: "TargetSettings",
@@ -298,8 +323,54 @@ export default {
       set(allowedUsersRef, { emails: this.allowedUsers.join(",") });
     },
     deleteAtmHist() {
-      remove(atmRef)
-      this.deleteDialog = false
+      remove(atmRef);
+      this.deleteDialog = false;
+    },
+    saveData() {
+      get(atmRef)
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const tempData = snapshot.val().temp;
+            const humData = snapshot.val().hum;
+
+            var dates = [... new Set(Object.keys(tempData).concat(Object.keys(humData)))]
+
+            var data = ["Date/Time,\tTemperature (F),\tHumidity (%)"]
+
+            for(const i in dates) {
+              console.log(dates[i])
+              var str = dates[i].toString() + ",\t"
+              if(tempData[dates[i]]) {
+                str = str + tempData[dates[i]].toString() + ",\t"
+              }
+              else {
+                str = str + ",\t"
+              }
+              if(humData[dates[i]]) {
+                str = str + humData[dates[i]].toString()
+              }
+              data.push(str)
+            }
+
+            data.push("Date/Time,\tTemperature (\u00B0F),\tHumidity (%)")
+            data.push("1679113867,\t75.1,\t21.2")
+
+            data = data.join("\n")
+
+            // Create and download csv
+            const blob = new Blob([data], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.setAttribute("href", url);
+            a.setAttribute("download", "hatch-minty-fresh-history.csv");
+            a.click();
+          } else {
+            console.log("No data available");
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+        });
     },
     updateTargetTemperature() {
       set(targetTempRef, this.target.temperature);
