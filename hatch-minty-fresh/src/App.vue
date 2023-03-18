@@ -1,94 +1,39 @@
 <template>
   <v-app class="bg-surface">
-    <v-navigation-drawer
-      disable-resize-watcher
-      disable-route-watcher
-      class="bg-background"
-      v-model="drawer"
-    >
-    </v-navigation-drawer>
-
     <v-app-bar>
-      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <v-img
         v-if="!isDark"
         src="@/assets/logo.svg"
-        max-height="64"
-        max-width="64"
+        max-height="54"
+        max-width="54"
         contain
+        class="ml-4"
       />
       <v-img
         v-if="isDark"
         src="@/assets/logo_dark.svg"
-        max-height="64"
-        max-width="64"
+        max-height="54"
+        max-width="54"
         contain
+        class="ml-4"
       />
-      <v-toolbar-title class="ml-1 text-h5 font-weight-bold">
+      <v-toolbar-title class="mx-1 text-h5 font-weight-bold">
         Hatch Minty Fresh
       </v-toolbar-title>
-      <v-btn @click="toggleTheme(); updateCharts()" icon="mdi-brightness-6"></v-btn>
+      
+      <auth-handler/>
+
     </v-app-bar>
 
-    <v-main class="grey lighten-3">
+    <v-main class="grey lighten-3 mt-2">
       <v-container>
         <v-row>
-          <v-col cols="12" sm="4" class="py-0">
-
-            <v-card class="bg-background elevation-8 mb-6">
-              <v-img
-                src="https://bdn-ss-hh.s3.amazonaws.com/uploads/2019/08/BabyQuail4.jpg"
-                class="align-end"
-                gradient="to bottom, #00000000, #00000000 80%, #000000bb"
-                cover
-              >
-                <v-card-title class="text-white">
-                    <v-icon color="red" icon="mdi-circle-medium"/>Live
-                </v-card-title>
-              </v-img>
-            </v-card>
-
-
-            <v-card class="bg-background elevation-8 mb-6">
-              <v-card-item title="Current Target Settings"> </v-card-item>
-              <v-card-text class="pb-0">
-                <v-row no-gutters>
-                  <v-col
-                    class="text-h4 text-primary"
-                    cols="6"
-                  >
-                    <v-icon color="primary" icon="mdi-thermometer"/>102&deg;F
-                  </v-col>
-                </v-row>
-                <v-row no-gutters>
-                  <v-col
-                    class="text-h4 text-secondary"
-                    cols="6"
-                  >
-                    <v-icon color="secondary" icon="mdi-water"/>45%
-                  </v-col>
-                </v-row>
-              </v-card-text>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="primary" icon="mdi-cog"></v-btn>
-              </v-card-actions>
-            </v-card>
-
+          <v-col cols="12" sm="3" class="py-0">
+            <target-settings />
           </v-col>
 
-          <v-col cols="12" sm="8" class="py-0">
-            <AtmosphereCard
-              title="Incubator Atmosphere"
-              :current-humidity="46.1"
-              :current-temperature="100.1"
-              :start-open="true"
-            />
-            <AtmosphereCard
-              title="External Atmosphere"
-              :current-humidity="46.1"
-              :current-temperature="70.2"
-            />
+          <v-col cols="12" sm="9" class="py-0">
+            <atmosphere-card title="Current Incubator Atmosphere" db-path="temp" />
           </v-col>
         </v-row>
       </v-container>
@@ -98,32 +43,22 @@
 
 <script>
 import AtmosphereCard from "@/components/AtmosphereCard.vue"
-import { useTheme } from 'vuetify'
+import TargetSettings from "@/components/TargetSettings.vue"
+import AuthHandler from "@/components/AuthHandler.vue"
 
 export default {
-  setup () {
-    const theme = useTheme()
-
-    return {
-      theme,
-      toggleTheme: () => {
-        theme.global.name.value = theme.global.current.value.dark ? 'lightTheme' : 'darkTheme'
-      }
-    }
-  },
   name: "App",
-  data: () => ({
-    drawer: false,
-  }),
   computed: {
     isDark() {
-      return this.$vuetify.theme.current.dark
-    }
+      return this.$vuetify.theme.current.dark;
+    },
   },
   components: {
     AtmosphereCard,
+    TargetSettings,
+    AuthHandler,
   },
-};
+}
 </script>
 
 <style>
@@ -133,7 +68,6 @@ export default {
 ::-moz-selection {
   background: rgb(var(--v-theme-secondary));
 }
-
 .v-toolbar-title {
   color: rgb(var(--v-theme-primary));
 }

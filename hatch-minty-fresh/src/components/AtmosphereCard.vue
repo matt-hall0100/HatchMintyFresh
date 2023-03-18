@@ -1,157 +1,202 @@
 <template>
-  <v-card class="bg-background elevation-8 mb-6">
+  <v-card class="bg-background elevation-8 mb-6 rounded-xl pa-1">
     <v-card-item :title="title"> </v-card-item>
 
     <v-card-text class="pb-0">
       <v-row no-gutters>
-        <v-col class="text-h4 text-primary" cols="6">
-          <v-icon color="primary" icon="mdi-thermometer"/>{{ currentTemperature }}&deg;F
+        <v-col class="text-h5 text-primary">
+          <v-icon color="primary" icon="mdi-thermometer" />{{
+            parseFloat(currentTemperature.toFixed(2))
+          }}&deg;F
         </v-col>
       </v-row>
       <v-row no-gutters>
-        <v-col class="text-h4 text-secondary" cols="6">
-          <v-icon color="secondary" icon="mdi-water"/>{{ currentHumidity }}%
+        <v-col class="text-h5 text-secondary">
+          <v-icon color="secondary" icon="mdi-water" />{{ parseFloat(currentHumidity.toFixed(2)) }}%
         </v-col>
       </v-row>
     </v-card-text>
 
-    <v-expand-transition>
-      <div v-if="expand">
-        <Line class="ma-6" :data="data" :options="options" ref="lineChart"/>
-      </div>
-    </v-expand-transition>
-
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn @click="expand = !expand" prepend-icon="mdi-chart-timeline-variant-shimmer">
-        {{ !expand ? "Show History" : "Hide History" }}
-      </v-btn>
-    </v-card-actions>
+    <div id="chart" class="ma-2">
+      <apexchart
+        type="area"
+        height="350"
+        ref="realtimeChart"
+        :options="chartOptions"
+        :series="series"
+      ></apexchart>
+    </div>
   </v-card>
 </template>
 
 <script>
-import { lightTheme } from "@/plugins/vuetify";
-import {
-  Chart,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Line } from "vue-chartjs";
-
-Chart.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-)
+import { db } from "@/plugins/firebase"
+import { ref, onValue} from "firebase/database"
 
 export default {
   name: "AtmosphereCard",
   props: {
     title: String,
-    currentTemperature: Number,
-    currentHumidity: Number,
-    startOpen: {
-      type: Boolean,
-      default: false,
-    },
+    dbPath: String,
   },
   mounted() {
-    this.expand = this.startOpen
-    Chart.defaults.borderColor = this.$vuetify.theme.current.colors['on-surface-variant']
-    Chart.defaults.color = this.$vuetify.theme.current.colors["on-background"]
-    Chart.defaults.font.size = 14
+    this.setDataLineChart();
+  },
+  methods: {
+    setDataLineChart() {
+      const tempRef = ref(db, 'temp');
+      onValue(tempRef, (snapshot) => {
+        const data = snapshot.val();
+
+        var latest = Object.keys(data).reduce(function(a, b){ return a > b ? a : b })
+        this.currentTemperature = data[latest]
+
+        var updatedTemp = []
+        var updatedHum = []
+
+        for (const [key, value] of Object.entries(data)) {
+          updatedTemp.push({x: new Date(0).setUTCSeconds(key), y: value})
+          updatedHum.push({x: new Date(0).setUTCSeconds(key), y: value / 2.0})
+        }
+
+        this.series[1].data = updatedHum
+        this.series[0].data = updatedTemp
+        if(this.$refs.realtimeChart) {
+          this.$refs.realtimeChart.updateSeries(this.series, true, true);
+        }
+      });
+    },
   },
   data: () => ({
-    expand: false,
-    data: {
-      labels: ["90", "80", "70", "60", "50", "40", "30", "20", "10", "0"],
-      datasets: [
+    currentTemperature: 0,
+    currentHumidity: 0,
+
+    series: [
+      {
+        name: "Temperature",
+        data: [],
+      },
+      {
+        name: "Humidity",
+        data: [],
+      },
+    ],
+
+    chartOptions: {
+      colors: ['#00e396', '#008ffb', '#546E7A', '#E91E63', '#FF9800'],
+      legend: {
+        show: true,
+        labels: {
+          useSeriesColors: true,
+        },
+      },
+      chart: {
+        height: 350,
+        type: "area",
+        toolbar: {
+          show: true,
+          tools: {
+            download: false,
+            selection: false,
+            zoom: true,
+            zoomin: true,
+            zoomout: true,
+            pan: true,
+            reset: true,
+          },
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      stroke: {
+        curve: "smooth",
+      },
+      xaxis: {
+        type: "datetime",
+        labels: {
+          datetimeFormatter: {
+            year: "yyyy",
+            month: "MMM 'yy",
+            day: "dd MMM",
+            hour: "h:mm TT",
+          },
+          style: {
+            colors: "#a0a0a0",
+          },
+        },
+      },
+      yaxis: [
         {
-          label: "Humidity",
-          cubicInterpolationMode: "monotone",
-          fill: true,
-          data: [30.8, 30.9, 31.2, 32.8, 36.4, 41.5, 44.8, 45.7, 45.9, 46.1],
-          borderColor: lightTheme.colors.secondary,
-          backgroundColor: lightTheme.colors.secondaryOpaqueFill,
-          yAxisID: "y1",
-          pointRadius: 0,
+          max: 110,
+          min: 55,
+          opposite: true,
+          axisTicks: {
+            show: true,
+            color: "#00e396",
+          },
+          axisBorder: {
+            show: true,
+            color: "#00e396",
+          },
+          title: {
+            text: "Temperature (°F)",
+            style: {
+              color: "#00e396",
+            },
+          },
+          labels: {
+            style: {
+              colors: "#00e396",
+              fontWeight: 600,
+            },
+            formatter: (v) => { return Math.floor(v) },
+          },
         },
         {
-          label: "Temperature",
-          cubicInterpolationMode: "monotone",
-          fill: true,
-          data: [70.7, 71.3, 76.1, 84.4, 93.1, 97.5, 99.3, 99.9, 100.3, 100.1],
-          borderColor: lightTheme.colors.primary,
-          backgroundColor: lightTheme.colors.primaryOpaqueFill,
-          yAxisID: "y",
-          pointRadius: 0,
+          max: 75,
+          min: 25,
+          axisTicks: {
+            show: true,
+            color: "#008ffb",
+          },
+          axisBorder: {
+            show: true,
+            color: "#008ffb",
+          },
+          title: {
+            text: "Humidity (%)",
+            style: {
+              color: "#008ffb",
+            },
+          },
+          labels: {
+            style: {
+              colors: "#008ffb",
+              fontWeight: 600,
+            },
+            formatter: (v) => { return Math.floor(v) },
+          },
         },
       ],
-    },
-    options: {
-      plugins: {
-        legend: {
-          labels: {
-            usePointStyle: true,
-          },
-        },
-      },
-      responsive: true,
-      interaction: {
-        mode: "index",
-        intersect: false,
-      },
-      scales: {
+      tooltip: {
+        shared: true,
+        theme: "dark",
         x: {
-          title: {
-            display: true,
-            text: "Minutes Ago",
-          },
+          format: "MMM dd yyyy h:mm:ss TT",
         },
         y: {
-          type: "linear",
-          display: true,
-          position: "left",
-          title: {
-            display: true,
-            text: "Temperature (°F)",
-          },
-          min: 65,
-          max: 110,
+            formatter: (value) => {return parseFloat(value.toFixed(2))},
         },
-        y1: {
-          type: "linear",
-          display: true,
-          position: "right",
-          title: {
-            display: true,
-            text: "Humidity (%)",
-          },
-          suggestedMin: 25,
-          suggestedMax: 75,
-
-          // grid line settings
-          grid: {
-            drawOnChartArea: false, // only want the grid lines for one axis to show up
+      },
+      grid: {
+        xaxis: {
+          lines: {
+            show: true,
           },
         },
       },
     },
   }),
-  components: {
-    Line,
-  },
 };
 </script>

@@ -8,10 +8,8 @@ export const lightTheme = {
   colors: {
     background: '#ffffff',
     surface: '#fbfffd',
-    primary: '#3eb489',
-    primaryOpaqueFill: '#3eb48944',
-    secondary: '#3eaab4',
-    secondaryOpaqueFill: '#3eaab444',
+    primary: '#00e396',
+    secondary: '#008ffb',
   }
 }
 
@@ -20,10 +18,8 @@ export const darkTheme = {
   colors: {
     background: '#121212',
     surface: '#202222',
-    primary: '#3eb489',
-    primaryOpaqueFill: '#3eb48944',
-    secondary: '#3eaab4',
-    secondaryOpaqueFill: '#3eaab444',
+    primary: '#00e396',
+    secondary: '#008ffb',
   }
 }
 
