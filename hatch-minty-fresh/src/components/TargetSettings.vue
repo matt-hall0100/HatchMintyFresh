@@ -4,14 +4,16 @@
     <v-card-text>
       <v-row no-gutters>
         <v-col class="text-h4 text-primary w-100">
-          <v-icon color="primary" icon="mdi-thermometer" />{{
-            target.temperature
-          }}&deg;F
+          <v-icon color="primary" icon="mdi-thermometer" />
+          <span v-if="!loadingTemp">{{ target.temperature }}&deg;F</span>
+          <line-loader v-else width="100px"/>
         </v-col>
       </v-row>
       <v-row no-gutters>
         <v-col class="text-h4 text-secondary">
-          <v-icon color="secondary" icon="mdi-water" />{{ target.humidity }}%
+          <v-icon color="secondary" icon="mdi-water" />
+          <span v-if="!loadingHum">{{ target.humidity }}%</span>
+          <line-loader v-else width="100px"/>
         </v-col>
       </v-row>
     </v-card-text>
@@ -171,6 +173,7 @@
 import { db } from "@/plugins/firebase";
 import { ref, onValue, set } from "firebase/database";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import LineLoader from "@/components/LineLoader.vue"
 
 const auth = getAuth();
 const allowedUsersRef = ref(db, "AllowedUsers");
@@ -194,9 +197,13 @@ export default {
       d: 0.5,
     },
     user: null,
-
     allowedUsers: [],
+    loadingTemp: true,
+    loadingHum: true,
   }),
+  components: {
+    LineLoader
+  },
   mounted() {
     onAuthStateChanged(auth, (user) => {
       if (user != null) {
@@ -210,9 +217,11 @@ export default {
     });
     onValue(targetHumRef, (snapshot) => {
       this.target.humidity = snapshot.val();
+      this.loadingHum = false;
     });
     onValue(targetTempRef, (snapshot) => {
       this.target.temperature = snapshot.val();
+      this.loadingTemp = false;
     });
     onValue(tempKpRef, (snapshot) => {
       this.pid.p = snapshot.val();

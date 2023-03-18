@@ -1,18 +1,23 @@
 <template>
   <v-card class="bg-background elevation-8 mb-6 rounded-xl pa-1">
     <v-card-item :title="title"> </v-card-item>
-
     <v-card-text class="pb-0">
       <v-row no-gutters>
         <v-col class="text-h5 text-primary">
-          <v-icon color="primary" icon="mdi-thermometer" />{{
+          <v-icon color="primary" icon="mdi-thermometer" />
+          <span v-if="!loading">{{
             parseFloat(currentTemperature.toFixed(2))
-          }}&deg;F
+          }}&deg;F</span>
+          <line-loader v-else width="70px"/>
         </v-col>
       </v-row>
       <v-row no-gutters>
         <v-col class="text-h5 text-secondary">
-          <v-icon color="secondary" icon="mdi-water" />{{ parseFloat(currentHumidity.toFixed(2)) }}%
+          <v-icon color="secondary" icon="mdi-water" />
+          <span v-if="!loading">
+            {{ parseFloat(currentHumidity.toFixed(2)) }}%
+          </span>
+          <line-loader v-else width="70px"/>
         </v-col>
       </v-row>
     </v-card-text>
@@ -32,6 +37,7 @@
 <script>
 import { db } from "@/plugins/firebase"
 import { ref, onValue} from "firebase/database"
+import LineLoader from "@/components/LineLoader.vue"
 
 export default {
   name: "AtmosphereCard",
@@ -41,6 +47,9 @@ export default {
   },
   mounted() {
     this.setDataLineChart();
+  },
+  components: {
+    LineLoader,
   },
   methods: {
     setDataLineChart() {
@@ -64,10 +73,13 @@ export default {
         if(this.$refs.realtimeChart) {
           this.$refs.realtimeChart.updateSeries(this.series, true, true);
         }
+        this.loading = false
       });
     },
   },
   data: () => ({
+    loading: true,
+
     currentTemperature: 0,
     currentHumidity: 0,
 
