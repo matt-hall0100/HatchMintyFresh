@@ -339,7 +339,9 @@ export default {
 
             for(const i in dates) {
               console.log(dates[i])
-              var str = dates[i].toString() + ",\t"
+              const date = new Date(dates[i] * 1000)
+              var str = date.toString() + ",\t"
+              console.log(str)
               if(tempData[dates[i]]) {
                 str = str + tempData[dates[i]].toString() + ",\t"
               }
@@ -351,9 +353,6 @@ export default {
               }
               data.push(str)
             }
-
-            data.push("Date/Time,\tTemperature (\u00B0F),\tHumidity (%)")
-            data.push("1679113867,\t75.1,\t21.2")
 
             data = data.join("\n")
 
