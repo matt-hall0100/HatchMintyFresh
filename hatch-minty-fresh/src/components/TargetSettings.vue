@@ -6,14 +6,14 @@
         <v-col class="text-h4 text-primary w-100">
           <v-icon color="primary" icon="mdi-thermometer" />
           <span v-if="!loadingTemp">{{ target.temperature }}&deg;F</span>
-          <line-loader v-else width="100px"/>
+          <line-loader v-else width="100px" />
         </v-col>
       </v-row>
       <v-row no-gutters>
         <v-col class="text-h4 text-secondary">
           <v-icon color="secondary" icon="mdi-water" />
           <span v-if="!loadingHum">{{ target.humidity }}%</span>
-          <line-loader v-else width="100px"/>
+          <line-loader v-else width="100px" />
         </v-col>
       </v-row>
     </v-card-text>
@@ -162,6 +162,35 @@
                 </v-combobox>
               </v-list-item>
             </v-list-group>
+            <v-dialog v-model="deleteDialog" width="auto">
+              <template v-slot:activator="{ props }">
+                <v-list-item
+                  v-bind="props"
+                  title="Delete data"
+                  subtitle="Erase all the chart temperature and humidity history"
+                  lines="two"
+                  prepend-icon="mdi-trash-can-outline"
+                  :disabled="!allowedUsers.includes(user.email)"
+                ></v-list-item>
+              </template>
+              <v-card class="rounded-xl pa-1" max-width="650px">
+                <v-card-title><v-icon color="error" icon="mdi-alert" /><span class="pa-4">Warning: Irreversible Action</span></v-card-title>
+                <v-card-text>
+                  You are about to delete all historical temperature and humidity data currently saved in the database.
+                  This data cannot be recovered once deleted. Are you sure you want to delete all data?
+                </v-card-text>
+                <v-card-actions>
+                  <v-row class="ma-0 pa-0">
+                    <v-col>
+                      <v-btn variant="tonal" color="error" block @click="deleteAtmHist()">Confirm Deletion</v-btn>
+                    </v-col>
+                    <v-col>
+                      <v-btn variant="tonal" color="primary" block @click="deleteDialog = false">Cancel</v-btn>
+                    </v-col>
+                  </v-row>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
           </v-list>
         </v-card>
       </v-dialog>
@@ -171,9 +200,9 @@
 
 <script>
 import { db } from "@/plugins/firebase";
-import { ref, onValue, set } from "firebase/database";
+import { ref, onValue, set, remove } from "firebase/database";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import LineLoader from "@/components/LineLoader.vue"
+import LineLoader from "@/components/LineLoader.vue";
 
 const auth = getAuth();
 const allowedUsersRef = ref(db, "AllowedUsers");
@@ -182,11 +211,13 @@ const targetTempRef = ref(db, "Configurable/TargetTemp");
 const tempKpRef = ref(db, "PIDTuning/tempKp");
 const tempKiRef = ref(db, "PIDTuning/tempKi");
 const tempKdRef = ref(db, "PIDTuning/tempKd");
+const atmRef = ref(db, "IncubatorAtmosphere")
 
 export default {
   name: "TargetSettings",
   data: () => ({
     dialog: false,
+    deleteDialog: false,
     target: {
       temperature: null,
       humidity: null,
@@ -202,7 +233,7 @@ export default {
     loadingHum: true,
   }),
   components: {
-    LineLoader
+    LineLoader,
   },
   mounted() {
     onAuthStateChanged(auth, (user) => {
@@ -265,6 +296,10 @@ export default {
       }
 
       set(allowedUsersRef, { emails: this.allowedUsers.join(",") });
+    },
+    deleteAtmHist() {
+      remove(atmRef)
+      this.deleteDialog = false
     },
     updateTargetTemperature() {
       set(targetTempRef, this.target.temperature);

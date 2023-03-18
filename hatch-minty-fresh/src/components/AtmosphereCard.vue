@@ -6,7 +6,7 @@
         <v-col class="text-h5 text-primary">
           <v-icon color="primary" icon="mdi-thermometer" />
           <span v-if="!loading">{{
-            parseFloat(currentTemperature.toFixed(2))
+            parseFloat(currentTemperature.toFixed(1))
           }}&deg;F</span>
           <line-loader v-else width="70px"/>
         </v-col>
@@ -15,7 +15,7 @@
         <v-col class="text-h5 text-secondary">
           <v-icon color="secondary" icon="mdi-water" />
           <span v-if="!loading">
-            {{ parseFloat(currentHumidity.toFixed(2)) }}%
+            {{ parseFloat(currentHumidity.toFixed(1)) }}%
           </span>
           <line-loader v-else width="70px"/>
         </v-col>
@@ -53,19 +53,28 @@ export default {
   },
   methods: {
     setDataLineChart() {
-      const tempRef = ref(db, 'temp');
-      onValue(tempRef, (snapshot) => {
+      const dpRef = ref(db, this.dbPath);
+      onValue(dpRef, (snapshot) => {
         const data = snapshot.val();
+        const tempData = data.temp;
+        const humData = data.hum;
 
-        var latest = Object.keys(data).reduce(function(a, b){ return a > b ? a : b })
-        this.currentTemperature = data[latest]
+        var latestTemp = Object.keys(tempData).reduce(function(a, b){ return a > b ? a : b })
+        var latestHum = Object.keys(humData).reduce(function(a, b){ return a > b ? a : b })
+        this.currentTemperature = tempData[latestTemp]
+        this.currentHumidity = humData[latestHum]
 
         var updatedTemp = []
         var updatedHum = []
+        var dt = new Date(0)
+        var ofst = dt.getTimezoneOffset() * 60;
 
-        for (const [key, value] of Object.entries(data)) {
-          updatedTemp.push({x: new Date(0).setUTCSeconds(key), y: value})
-          updatedHum.push({x: new Date(0).setUTCSeconds(key), y: value / 2.0})
+        for (const [key, value] of Object.entries(tempData)) {
+          updatedTemp.push({x: new Date(0).setUTCSeconds(parseInt(key) + ofst), y: value})
+        }
+
+        for (const [key, value] of Object.entries(humData)) {
+          updatedHum.push({x: new Date(0).setUTCSeconds(parseInt(key) + ofst), y: value})
         }
 
         this.series[1].data = updatedHum
@@ -166,8 +175,8 @@ export default {
           },
         },
         {
-          max: 75,
-          min: 25,
+          max: 65,
+          min: 20,
           axisTicks: {
             show: true,
             color: "#008ffb",
@@ -198,7 +207,7 @@ export default {
           format: "MMM dd yyyy h:mm:ss TT",
         },
         y: {
-            formatter: (value) => {return parseFloat(value.toFixed(2))},
+            formatter: (value) => {return parseFloat(value.toFixed(1))},
         },
       },
       grid: {
