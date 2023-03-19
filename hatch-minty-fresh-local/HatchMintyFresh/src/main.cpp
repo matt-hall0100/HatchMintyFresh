@@ -345,12 +345,14 @@ void loop() {
       Serial.println("PID: " + String(Output));
       Serial.println("Humidifier On: " + String(HumidifierOn));
 
-      if (!Firebase.RTDB.setFloat(&fbdo, "IncubatorAtmosphere/temp/" + curTime, Input)) {
-        Serial.println("RTDB Failure: " + fbdo.errorReason());
-      }
-      if (!Firebase.RTDB.setFloat(&fbdo, "IncubatorAtmosphere/hum/" + curTime, Humidity)) {
-        Serial.println("RTDB Failure: " + fbdo.errorReason());
-      }
+
+      json.set("0", Input);
+      json.set("1", Humidity);
+      json.set("2", Output);
+      json.set("3", HumidifierOn);
+      json.set("4", TargetTemp);
+      json.set("5", TargetHum);
+      Firebase.RTDB.setJSON(&fbdo, "IncubatorAtmosphere/" + curTime, &json);
     }
   }
 }
