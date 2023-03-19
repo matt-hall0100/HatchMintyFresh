@@ -33,7 +33,7 @@
           </v-col>
 
           <v-col cols="12" sm="9" class="py-0">
-            <atmosphere-card title="Current Incubator Atmosphere" db-path="temp" />
+            <atmosphere-card title="Current Incubator Atmosphere" db-path="IncubatorAtmosphere" />
           </v-col>
         </v-row>
       </v-container>

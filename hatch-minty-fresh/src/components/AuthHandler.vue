@@ -2,7 +2,7 @@
   <span>
     <v-tooltip
       location="bottom"
-      text="Toggle theme"
+      :text="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
       open-delay="750"
     >
       <template v-slot:activator="{ props }">
@@ -13,7 +13,7 @@
     <span v-cloak>
       <span v-if="!user">
         <v-btn
-          v-cloak
+          :loading="loading"
           class="mx-2"
           @click="signIn()"
           v-if="!this.$vuetify.display.smAndDown"
@@ -23,6 +23,7 @@
           Sign In
         </v-btn>
         <v-btn
+          :loading="loading"
           class="mr-2"
           @click="signIn()"
           v-if="this.$vuetify.display.smAndDown"
@@ -156,7 +157,13 @@ export default {
     deleteAccountDialog: false,
     user: null,
     displayName: "",
+    loading: true,
   }),
+  computed: {
+    isDark() {
+      return this.$vuetify.theme.current.dark;
+    },
+  },
   mounted() {
     if (localStorage.getItem("theme") == "dark") {
       this.toggleTheme();
@@ -178,6 +185,7 @@ export default {
       } else {
         this.user = null;
       }
+      this.loading = false
     });
   },
   methods: {
