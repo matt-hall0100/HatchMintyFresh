@@ -9,18 +9,17 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-// #include "addons/TokenHelper.h"
-// #include "addons/RTDBHelper.h"
-
 // define GPIO
-#define ZCROSS 5        // pin D1
-#define PWM 4           // pin D2
-#define LOWERDHTPIN 14  // pin D5
-#define UPPERDHTPIN 12  // pin D6
+#define ZCROSS 5            // pin D1
+#define PWM 4               // pin D2
+#define LOWERDHTPIN 14      // pin D5
+#define UPPERDHTPIN 12      // pin D6
+#define HUMIDITYPOWER 13    // pin D7
+#define HUMIDITYCONTROL 15  // pin D8
 
 // define wifi credentials
 #define WIFI_SSID "Braden, Use This Wifi"
-#define WIFI_PASSWORD "gohawks99"
+#define WIFI_PASSWORD ""
 
 // define firebase constants
 #define API_KEY ""
@@ -30,24 +29,30 @@
 
 
 // Create DHT Objects
-DHT updht(UPPERDHTPIN, DHT22);
+DHT highdht(UPPERDHTPIN, DHT22);
 DHT lowdht(LOWERDHTPIN, DHT22);
 
 // Create PID Objects
-double Setpoint, Input, Output = 0;
-double softKp = 0.1, softKi = 0.2, softKd = 0.5;
+double TargetTemp, Input, Output = 0;
+double softKp = 0.3, softKi = 30, softKd = 0.5;
 double hardKp = 20, hardKi = 15, hardKd = 0;
 double softMinRelThres = -2, softMaxRelThres = 1.5;
-int softMinOut = 10, softMaxOut = 50;
+int softMinOut = 10, softMaxOut = 55;
 int hardMinOut = 0, hardMaxOut = 99;
-PID tempPID(&Input, &Output, &Setpoint, softKp, softKi, softKd, DIRECT);
+PID tempPID(&Input, &Output, &TargetTemp, softKp, softKi, softKd, DIRECT);
 bool softActive = true;
+
+// Create Humidity Controller Objects
+double Humidity;
+double TargetHum;
+bool HumidifierOn;
+
 
 // Create Timer Objects
 Ticker timer;
 unsigned long pidStartTime = millis();
+unsigned long humDataPrevTime = millis();
 unsigned long sendDataPrevTime = millis();
-int counter = 0;
 
 // Create Firebase Objects
 FirebaseData fbdo;
@@ -70,7 +75,60 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org");
 |  Returns:  average temperature in degrees fahrenheit
 *-------------------------------------------------------------------*/
 double getAvgTemp() {
-  return ((lowdht.readTemperature(true) + updht.readTemperature(true))/2.0);
+  return ((lowdht.readTemperature(true) + highdht.readTemperature(true))/2.0);
+}
+
+
+/*------------------------------------------------- getAvgHum --------
+|  Function getAvgHum
+|
+|  Purpose:  reads the current humitidy from the two DHT22 sensors
+|            and returns the average humidity in percentage
+|
+|  Parameters: none
+|
+|  Returns:  average humidity in percent
+*-------------------------------------------------------------------*/
+double getAvgHum() {
+  return ((lowdht.readHumidity() + highdht.readHumidity())/2.0);
+}
+
+
+/*------------------------------------------------- turnOnHum --------
+|  Function turnOnHum
+|
+|  Purpose:  turns on the humidifier
+|
+|  Parameters: none
+|
+|  Returns:  none
+*-------------------------------------------------------------------*/
+void turnOnHum() {
+  if (!HumidifierOn) {
+    HumidifierOn = true;
+    digitalWrite(HUMIDITYPOWER, HIGH);
+    digitalWrite(HUMIDITYCONTROL, HIGH);
+    delay(50);
+    digitalWrite(HUMIDITYCONTROL, LOW);
+    delay(50);
+    digitalWrite(HUMIDITYCONTROL, HIGH);
+  }
+}
+
+
+/*------------------------------------------------- turnOffHum -------
+|  Function turnOffHum
+|
+|  Purpose:  turns off the humidifier
+|
+|  Parameters: none
+|
+|  Returns:  none
+*-------------------------------------------------------------------*/
+void turnOffHum() {
+  HumidifierOn = false;
+  digitalWrite(HUMIDITYPOWER, LOW);
+  digitalWrite(HUMIDITYCONTROL, LOW);
 }
 
 
@@ -86,10 +144,10 @@ double getAvgTemp() {
 void updatePID() {
   pidStartTime = millis();
   double lInput = getAvgTemp();
-  if(lInput == lInput) {  // check for NaN
+  if(!isnan(lInput)) {  // check for NaN
     Input = lInput;
     // soft PID controller mode
-    if (Setpoint+softMinRelThres <= Input && Setpoint+softMaxRelThres >= Input) {
+    if (TargetTemp+softMinRelThres <= Input && TargetTemp+softMaxRelThres >= Input) {
       if (softActive == false) {
         softActive = true;
         tempPID.SetTunings(softKp, softKi, softKd);
@@ -108,6 +166,34 @@ void updatePID() {
     }
     
     tempPID.Compute();
+  }
+}
+
+
+/*------------------------------------------------- updateHum --------
+|  Function updateHum
+|
+|  Purpose:  updates the Humidity reading and computes required output
+|
+|  Parameters: none
+|
+|  Returns:  none
+*-------------------------------------------------------------------*/
+void updateHum() {
+  humDataPrevTime = millis();
+  double lInput = getAvgHum();
+  if(!isnan(lInput)) {  // check for NaN
+    Humidity = lInput;
+    if (TargetHum > Humidity) {
+      if (!HumidifierOn) {
+        turnOnHum();
+      }
+    }
+    else if (HumidifierOn)
+    {
+      turnOffHum();
+    }
+    
   }
 }
 
@@ -164,12 +250,13 @@ void initWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED) {
-    Serial.print('.');
+    Serial.print(',');
     delay(1000);
   }
   Serial.println(WiFi.localIP());
   Serial.println();
 }
+
 
 /*------------------------------------------------- getTime ----------
 |  Function getTime
@@ -180,7 +267,6 @@ void initWiFi() {
 |
 |  Returns:  none
 *-------------------------------------------------------------------*/
-// Function that gets current epoch time
 unsigned long getTime() {
   timeClient.update();
   unsigned long now = timeClient.getEpochTime();
@@ -200,6 +286,12 @@ void setup() {
   pinMode(ZCROSS, INPUT);
   attachInterrupt(digitalPinToInterrupt(ZCROSS), ZeroCross, RISING);
   
+  // humitiy setup
+  pinMode(HUMIDITYPOWER, OUTPUT);
+  pinMode(HUMIDITYCONTROL, OUTPUT);
+  turnOffHum();
+  TargetHum = 45;
+  
   // Wifi setup
   initWiFi();
   timeClient.begin();
@@ -218,31 +310,27 @@ void setup() {
   Firebase.begin(&config, &auth);
 
   // DHT setup
-  updht.begin();
+  highdht.begin();
   lowdht.begin();
 
   // PID setup
-  Setpoint = 99.5;
+  TargetTemp = 99.5;
   Input = getAvgTemp();
   tempPID.SetOutputLimits(softMinOut, softMaxOut);
-  tempPID.SetSampleTime(500);
+  tempPID.SetSampleTime(2000);
   tempPID.SetMode(AUTOMATIC);
 }
 
 
 void loop() {
-  if (counter == 10){
-    Serial.print(F("\n\nPID Output set: "));
-    Serial.print(Output);
-    Serial.print(F("\nTemperature: "));
-    Serial.print(Input);
-    counter = 0;
-  }
-
   // Update PID Timer
-  if(millis() - pidStartTime >= 500) {
+  if(millis() - pidStartTime >= 2000) {
     updatePID();
-    counter++;
+  }
+  
+  // Update Humidity Timer
+  if(millis() - humDataPrevTime >= 4000) {
+    updateHum();
   }
   
   // Add sample to Firebase Timer
@@ -250,14 +338,19 @@ void loop() {
     if (Firebase.ready()) {
       sendDataPrevTime = millis();
 
-      // parentPath = databasePath + "/" + String(getTime());
+      String curTime = String(getTime());
 
-      // json.set(tempPath.c_str(), String(getAvgTemp()));
-      // json.set(timePath, String(timestamp));
-      if (!Firebase.RTDB.setFloat(&fbdo, "temp/" + String(getTime()), Input)) {
+      Serial.println("\nTemperature: " + String(Input));
+      Serial.println("Humidity: " + String(Humidity));
+      Serial.println("PID: " + String(Output));
+      Serial.println("Humidifier On: " + String(HumidifierOn));
+
+      if (!Firebase.RTDB.setFloat(&fbdo, "IncubatorAtmosphere/temp/" + curTime, Input)) {
         Serial.println("RTDB Failure: " + fbdo.errorReason());
       }
-      // Serial.printf("\n\nSet json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
+      if (!Firebase.RTDB.setFloat(&fbdo, "IncubatorAtmosphere/hum/" + curTime, Humidity)) {
+        Serial.println("RTDB Failure: " + fbdo.errorReason());
+      }
     }
   }
 }
