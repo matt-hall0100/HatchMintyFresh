@@ -39,10 +39,22 @@
      inkscape:window-x="-11"
      inkscape:window-y="-11"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g835"
+     inkscape:current-layer="layer2"
      units="mm"
      height="300mm"
      inkscape:document-units="mm" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer 1">
+    <circle
+       style="display:inline;fill:#000000;fill-opacity:1;stroke:#121212;stroke-width:0;stroke-linecap:round;stroke-linejoin:round"
+       id="path852"
+       cx="253.85509"
+       cy="146.2724"
+       r="274.01575"
+       transform="translate(20.160663,127.74334)" />
+  </g>
   <g
      inkscape:groupmode="layer"
      id="layer1"
