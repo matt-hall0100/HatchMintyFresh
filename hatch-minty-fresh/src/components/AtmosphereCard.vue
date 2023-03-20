@@ -116,7 +116,7 @@ export default {
       stroke: {
         width: [4, 4, 2, 2],
         curve: ['smooth','smooth','stepline','stepline'],
-        dashArray: [0, 0, 15, 15]
+        dashArray: [0, 0, 2, 2]
       },
       fill: {
         type: "solid",
@@ -236,13 +236,6 @@ export default {
         },
         y: {
             formatter: (value) => {return parseFloat(value.toFixed(1))},
-        },
-      },
-      grid: {
-        xaxis: {
-          lines: {
-            show: true,
-          },
         },
       },
     },

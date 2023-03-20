@@ -53,7 +53,7 @@
                   @touchstart.stop
                   :disabled="!allowedUsers.includes(user.email)"
                   v-model="target.temperature"
-                  :max="110"
+                  :max="105"
                   :min="70"
                   :step="0.1"
                   :thumb-size="14"
@@ -87,7 +87,7 @@
                   :disabled="!allowedUsers.includes(user.email)"
                   v-model="target.humidity"
                   :max="60"
-                  :min="35"
+                  :min="30"
                   :step="0.1"
                   :thumb-size="14"
                   hide-details
@@ -372,10 +372,10 @@ export default {
         });
     },
     updateTargetTemperature() {
-      set(targetTempRef, this.target.temperature);
+      set(targetTempRef, parseInt(this.target.temperature));
     },
     updateTargetHumidity() {
-      set(targetHumRef, this.target.humidity);
+      set(targetHumRef, parseInt(this.target.humidity));
     },
     updatePidP() {
       set(tempKpRef, this.pid.p);
