@@ -56,9 +56,12 @@ unsigned long sendDataPrevTime = millis();
 
 // Create Firebase Objects
 FirebaseData fbdo;
+FirebaseData stream;
 FirebaseAuth auth;
 FirebaseConfig config;
 FirebaseJson json;
+volatile bool dataChanged = false;
+String eventPath = "";
 
 // Create Time Objects
 WiFiUDP ntpUDP;
@@ -152,7 +155,6 @@ void updatePID() {
         softActive = true;
         tempPID.SetTunings(softKp, softKi, softKd);
         tempPID.SetOutputLimits(softMinOut, softMaxOut);
-        Serial.println("\nSoft Mode Active");
       }
     }
 
@@ -162,7 +164,6 @@ void updatePID() {
       softActive = false;
       tempPID.SetTunings(hardKp, hardKi, hardKd);
       tempPID.SetOutputLimits(hardMinOut, hardMaxOut);
-      Serial.println("\nHard Mode Active");
     }
     
     tempPID.Compute();
@@ -246,15 +247,11 @@ IRAM_ATTR void onTime() {
 |
 |  Returns:  none
 *-------------------------------------------------------------------*/
-void initWiFi() {
+IRAM_ATTR void initWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(',');
-    delay(1000);
+    delay(1);
   }
-  Serial.println(WiFi.localIP());
-  Serial.println();
 }
 
 
@@ -271,6 +268,22 @@ unsigned long getTime() {
   timeClient.update();
   unsigned long now = timeClient.getEpochTime();
   return now;
+}
+
+
+void streamCallback(FirebaseStream data)
+{
+  dataChanged = true;
+}
+
+
+void streamTimeoutCallback(bool timeout)
+{
+  if (timeout)
+    Serial.println("stream timed out, resuming...\n");
+
+  if (!stream.httpConnected())
+    Serial.printf("error code: %d, reason: %s\n\n", stream.httpCode(), stream.errorReason().c_str());
 }
 
 
@@ -301,13 +314,10 @@ void setup() {
   config.database_url = DATABASE_URL;
   Firebase.reconnectWiFi(true);
   fbdo.setResponseSize(4096);
-  if (Firebase.signUp(&config, &auth, "", "")){
-    Serial.println("ok");
-  }
-  else{
-    Serial.printf("%s\n", config.signer.signupError.message.c_str());
-  }
+  !Firebase.signUp(&config, &auth, "", "");
   Firebase.begin(&config, &auth);
+  Firebase.RTDB.beginStream(&stream, "/Configurable");
+  Firebase.RTDB.setStreamCallback(&stream, streamCallback, streamTimeoutCallback);
 
   // DHT setup
   highdht.begin();
@@ -340,12 +350,6 @@ void loop() {
 
       String curTime = String(getTime());
 
-      Serial.println("\nTemperature: " + String(Input));
-      Serial.println("Humidity: " + String(Humidity));
-      Serial.println("PID: " + String(Output));
-      Serial.println("Humidifier On: " + String(HumidifierOn));
-
-
       json.set("0", Input);
       json.set("1", Humidity);
       json.set("2", Output);
@@ -354,5 +358,14 @@ void loop() {
       json.set("5", TargetHum);
       Firebase.RTDB.setJSON(&fbdo, "IncubatorAtmosphere/" + curTime, &json);
     }
+  }
+
+  // Firebase Data Changed
+  if(dataChanged && Firebase.ready()) {
+    dataChanged = false;
+    Firebase.RTDB.getFloat(&fbdo, "Configurable/TargetTemp/");
+    TargetTemp = fbdo.to<float>();
+    Firebase.RTDB.getFloat(&fbdo, "Configurable/TargetHum/");
+    TargetHum = fbdo.to<float>();
   }
 }
