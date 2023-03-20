@@ -56,32 +56,33 @@ export default {
       const dpRef = ref(db, this.dbPath);
       onValue(dpRef, (snapshot) => {
         const data = snapshot.val();
-        const tempData = data.temp;
-        const humData = data.hum;
 
-        var latestTemp = Object.keys(tempData).reduce(function(a, b){ return a > b ? a : b })
-        var latestHum = Object.keys(humData).reduce(function(a, b){ return a > b ? a : b })
-        this.currentTemperature = tempData[latestTemp]
-        this.currentHumidity = humData[latestHum]
+        var latest = Object.keys(data).reduce(function(a, b){ return a > b ? a : b })
+        this.currentTemperature = data[latest][0]
+        this.currentHumidity = data[latest][1]
 
-        var updatedTemp = []
-        var updatedHum = []
-        var dt = new Date(0)
-        var ofst = dt.getTimezoneOffset() * 60;
+        var temp = []
+        var hum = []
+        var tempIntensity = []
+        var humOn = []
+        var targetTemp = []
+        var targetHum = []
 
-        for (const [key, value] of Object.entries(tempData)) {
-          updatedTemp.push({x: new Date(0).setUTCSeconds(parseInt(key) + ofst), y: value})
+        for (const [key, value] of Object.entries(data)) {
+          var t = new Date(0).setUTCSeconds(parseInt(key))
+          temp.push({x: t, y: value[0]})
+          hum.push({x: t, y: value[1]})
+          tempIntensity.push({x: t, y: value[2]})
+          value[3] ? humOn.push({x: t, y: 1}) : humOn.push({x: t, y: 0})
+          targetTemp.push({x: t, y: value[4]})
+          targetHum.push({x: t, y: value[5]})
         }
 
-        for (const [key, value] of Object.entries(humData)) {
-          updatedHum.push({x: new Date(0).setUTCSeconds(parseInt(key) + ofst), y: value})
-        }
+        this.series[0].data = temp
+        this.series[1].data = hum
+        this.series[2].data = targetTemp
+        this.series[3].data = targetHum
 
-        this.series[1].data = updatedHum
-        this.series[0].data = updatedTemp
-        if(this.$refs.realtimeChart) {
-          this.$refs.realtimeChart.updateSeries(this.series, true, true);
-        }
         this.loading = false
       });
     },
@@ -101,10 +102,26 @@ export default {
         name: "Humidity",
         data: [],
       },
+      {
+        name: "Target Temperature",
+        data: [],
+      },
+      {
+        name: "Target Humidity",
+        data: [],
+      },
     ],
-
     chartOptions: {
-      colors: ['#00e396', '#008ffb', '#546E7A', '#E91E63', '#FF9800'],
+      colors: ['#00e396', '#008ffb', '#e3004d', '#fb6c00'],
+      stroke: {
+        width: [4, 4, 2, 2],
+        curve: ['smooth','smooth','stepline','stepline'],
+        dashArray: [0, 0, 15, 15]
+      },
+      fill: {
+        type: "solid",
+        opacity: [0.35, 0.35, 0, 0]
+      },
       legend: {
         show: true,
         labels: {
@@ -130,17 +147,17 @@ export default {
       dataLabels: {
         enabled: false,
       },
-      stroke: {
-        curve: "smooth",
-      },
       xaxis: {
         type: "datetime",
         labels: {
+          datetimeUTC: false,
           datetimeFormatter: {
-            year: "yyyy",
-            month: "MMM 'yy",
-            day: "dd MMM",
-            hour: "h:mm TT",
+              year: 'yyyy',
+              month: "MMM 'yy",
+              day: 'dd MMM',
+              hour: 'h:mm TT',
+              minute: 'h:mm:ss TT',
+              second: 'h:mm:ss TT'
           },
           style: {
             colors: "#a0a0a0",
@@ -149,8 +166,8 @@ export default {
       },
       yaxis: [
         {
-          max: 110,
-          min: 55,
+          max: 105,
+          min: 65,
           opposite: true,
           axisTicks: {
             show: true,
@@ -199,6 +216,17 @@ export default {
             formatter: (v) => { return Math.floor(v) },
           },
         },
+        {
+          max: 105,
+          min: 65,
+          show: false,
+        },
+        {
+          max: 65,
+          min: 20,
+          show: false,
+        },
+        
       ],
       tooltip: {
         shared: true,
