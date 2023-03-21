@@ -53,7 +53,7 @@
               </template>
 
               <v-list-item-title>{{
-                user.displayName.split("/d/")[0]
+                user.displayName.split("/d/").join("")
               }}</v-list-item-title>
 
               <v-list-item-subtitle>{{ user.email }}</v-list-item-subtitle>
