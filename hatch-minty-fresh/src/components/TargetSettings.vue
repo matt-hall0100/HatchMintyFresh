@@ -355,35 +355,24 @@ export default {
       get(atmRef)
         .then((snapshot) => {
           if (snapshot.exists()) {
-            const tempData = snapshot.val().temp;
-            const humData = snapshot.val().hum;
+            var out = ["Date/Time,\tTemperature (F),\tHumidity (%),\tTarget Temperature (F),\tTarget Humidity (%),\tTemperature Intensity,\tHumidity Off/On"];
 
-            var dates = [
-              ...new Set(Object.keys(tempData).concat(Object.keys(humData))),
-            ];
-
-            var data = ["Date/Time,\tTemperature (F),\tHumidity (%)"];
-
-            for (const i in dates) {
-              console.log(dates[i]);
-              const date = new Date(dates[i] * 1000);
+            for (const [key, value] of Object.entries(snapshot.val())) {
+              const date = new Date(key * 1000);
               var str = date.toString() + ",\t";
-              console.log(str);
-              if (tempData[dates[i]]) {
-                str = str + tempData[dates[i]].toString() + ",\t";
-              } else {
-                str = str + ",\t";
-              }
-              if (humData[dates[i]]) {
-                str = str + humData[dates[i]].toString();
-              }
-              data.push(str);
+              str = str + value[0].toString() + ",\t";
+              str = str + value[1].toString() + ",\t";
+              str = str + value[2].toString() + ",\t";
+              str = str + value[3].toString() + ",\t";
+              str = str + value[4].toString() + ",\t";
+              str = str + value[5].toString() + ",\t";
+              out.push(str);
             }
 
-            data = data.join("\n");
+            out = out.join("\n");
 
             // Create and download csv
-            const blob = new Blob([data], { type: "text/csv" });
+            const blob = new Blob([out], { type: "text/csv" });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.setAttribute("href", url);
