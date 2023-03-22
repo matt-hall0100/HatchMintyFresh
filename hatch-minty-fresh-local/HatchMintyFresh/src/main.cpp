@@ -16,6 +16,7 @@
 #define UPPERDHTPIN 12      // pin D6
 #define HUMIDITYPOWER 13    // pin D7
 #define HUMIDITYCONTROL 15  // pin D8
+#define RESETPIN 9          // pin SDS
 
 // define wifi credentials
 #define WIFI_SSID "Braden, Use This Wifi"
@@ -66,6 +67,8 @@ String eventPath = "";
 // Create Time Objects
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+bool firstTimeBoot = true;
 
 /*------------------------------------------------- getAvgTemp -------
 |  Function getAvgTemp
@@ -249,9 +252,28 @@ IRAM_ATTR void onTime() {
 *-------------------------------------------------------------------*/
 IRAM_ATTR void initWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1);
+  int count = 0;
+  if(!firstTimeBoot) {
+    digitalWrite(RESETPIN, LOW);
   }
+  while (WiFi.status() != WL_CONNECTED && count < 15) {
+    digitalWrite(BUILTIN_LED, HIGH);
+    delay(100);
+    digitalWrite(BUILTIN_LED, LOW);
+    delay(100);
+    digitalWrite(BUILTIN_LED, HIGH);
+    delay(100);
+    digitalWrite(BUILTIN_LED, LOW);
+    delay(200);
+    digitalWrite(BUILTIN_LED, HIGH);
+    delay(250);
+    digitalWrite(BUILTIN_LED, LOW);
+    delay(250);
+    count++;
+  }
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+  firstTimeBoot = false;
 }
 
 
@@ -279,16 +301,14 @@ void streamCallback(FirebaseStream data)
 
 void streamTimeoutCallback(bool timeout)
 {
-  if (timeout)
-    Serial.println("stream timed out, resuming...\n");
-
-  if (!stream.httpConnected())
-    Serial.printf("error code: %d, reason: %s\n\n", stream.httpCode(), stream.errorReason().c_str());
+  // do nothing
 }
 
 
 void setup() {
-  Serial.begin(115200);
+  // reset pin setup
+  digitalWrite(RESETPIN, HIGH);
+  pinMode(RESETPIN, OUTPUT);
   
   // timer setup
   timer1_attachInterrupt(onTime); // Add ISR Function
@@ -306,6 +326,7 @@ void setup() {
   TargetHum = 45;
   
   // Wifi setup
+  pinMode(BUILTIN_LED, OUTPUT);
   initWiFi();
   timeClient.begin();
 
