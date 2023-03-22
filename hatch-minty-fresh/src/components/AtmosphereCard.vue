@@ -38,6 +38,9 @@
 import { db } from "@/plugins/firebase"
 import { ref, onValue} from "firebase/database"
 import LineLoader from "@/components/LineLoader.vue"
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+const auth = getAuth();
 
 export default {
   name: "AtmosphereCard",
@@ -47,6 +50,13 @@ export default {
   },
   mounted() {
     this.setDataLineChart();
+    onAuthStateChanged(auth, (user) => {
+      if (user != null) {
+        this.user = user;
+      } else {
+        this.user = null;
+      }
+    });
   },
   components: {
     LineLoader,
@@ -60,6 +70,7 @@ export default {
         var latest = Object.keys(data).reduce(function(a, b){ return a > b ? a : b })
         this.currentTemperature = data[latest][0]
         this.currentHumidity = data[latest][1]
+        console.log(this.currentTemperature)
 
         var temp = []
         var hum = []
@@ -82,12 +93,21 @@ export default {
         this.series[1].data = hum
         this.series[2].data = targetTemp
         this.series[3].data = targetHum
+        if(this.user && this.user.displayName.includes(" 🤓")) {
+          this.series[4].data = tempIntensity
+          this.series[5].data = humOn
+        }
+        else {
+          this.series[4].data = null
+          this.series[5].data = null
+        }
 
-        this.loading = false
+        this.loading = false;
       });
     },
   },
   data: () => ({
+    user: null,
     loading: true,
 
     currentTemperature: 0,
@@ -97,33 +117,48 @@ export default {
       {
         name: "Temperature",
         data: [],
+        type: 'area',
       },
       {
         name: "Humidity",
         data: [],
+        type: 'area',
       },
       {
         name: "Target Temperature",
         data: [],
+        type: 'area',
       },
       {
         name: "Target Humidity",
         data: [],
+        type: 'area',
+      },
+      {
+        name: "Temperature Intensity",
+        data: [],
+        type: 'area',
+      },
+      {
+        name: "Humidity Off/On",
+        data: [],
+        type: 'area',
       },
     ],
     chartOptions: {
-      colors: ['#00e396', '#008ffb', '#e3004d', '#fb6c00'],
+      colors: ['#00e396', '#008ffb', '#e3004d', '#fb6c00', '#ff0000', '#0000ff'],
       stroke: {
-        width: [4, 4, 2, 2],
-        curve: ['smooth','smooth','stepline','stepline'],
-        dashArray: [0, 0, 15, 15]
+        width: [4, 4, 2, 2, 2, 0],
+        curve: ['smooth','smooth','stepline','stepline', 'smooth', 'stepline'],
+        dashArray: [0, 0, 2, 2, 2, 2]
       },
       fill: {
         type: "solid",
-        opacity: [0.35, 0.35, 0, 0]
+        opacity: [0.35, 0.35, 0, 0, 0, 0.07]
       },
       legend: {
         show: true,
+        showForNullSeries: false,
         labels: {
           useSeriesColors: true,
         },
@@ -226,6 +261,16 @@ export default {
           min: 20,
           show: false,
         },
+        {
+          max: 100,
+          min: 0,
+          show: false,
+        },
+        {
+          max: 1,
+          min: 0,
+          show: false,
+        },
         
       ],
       tooltip: {
@@ -236,13 +281,6 @@ export default {
         },
         y: {
             formatter: (value) => {return parseFloat(value.toFixed(1))},
-        },
-      },
-      grid: {
-        xaxis: {
-          lines: {
-            show: true,
-          },
         },
       },
     },

@@ -53,7 +53,7 @@
                   @touchstart.stop
                   :disabled="!allowedUsers.includes(user.email)"
                   v-model="target.temperature"
-                  :max="110"
+                  :max="105"
                   :min="70"
                   :step="0.1"
                   :thumb-size="14"
@@ -87,7 +87,7 @@
                   :disabled="!allowedUsers.includes(user.email)"
                   v-model="target.humidity"
                   :max="60"
-                  :min="35"
+                  :min="30"
                   :step="0.1"
                   :thumb-size="14"
                   hide-details
@@ -216,6 +216,24 @@
                 </v-card-actions>
               </v-card>
             </v-dialog>
+            <v-list-item
+              title="Advanced statistics"
+              subtitle="Enable stats for nerds 🤓"
+              lines="two"
+              prepend-icon="mdi-chart-bar-stacked"
+              @click="toggleNerd()"
+            >
+              <template v-slot:append>
+                <v-switch
+                  @click="null"
+                  density="compact"
+                  inset
+                  hide-details
+                  v-model="nerd"
+                  color="primary"
+                ></v-switch>
+              </template>
+            </v-list-item>
           </v-list>
         </v-card>
       </v-dialog>
@@ -226,7 +244,7 @@
 <script>
 import { db } from "@/plugins/firebase";
 import { ref, onValue, set, remove, get } from "firebase/database";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, updateProfile } from "firebase/auth";
 import LineLoader from "@/components/LineLoader.vue";
 
 const auth = getAuth();
@@ -247,6 +265,7 @@ export default {
       temperature: null,
       humidity: null,
     },
+    nerd: false,
     pid: {
       p: 0.5,
       i: 0.5,
@@ -264,6 +283,12 @@ export default {
     onAuthStateChanged(auth, (user) => {
       if (user != null) {
         this.user = user;
+        if (user.displayName.includes(" 🤓")) {
+          this.nerd = true
+        }
+        else if (!user.displayName.includes(" 🤓")) {
+          this.nerd = false
+        }
       } else {
         this.user = null;
       }
@@ -330,34 +355,24 @@ export default {
       get(atmRef)
         .then((snapshot) => {
           if (snapshot.exists()) {
-            const tempData = snapshot.val().temp;
-            const humData = snapshot.val().hum;
+            var out = ["Date/Time,\tTemperature (F),\tHumidity (%),\tTarget Temperature (F),\tTarget Humidity (%),\tTemperature Intensity,\tHumidity Off/On"];
 
-            var dates = [... new Set(Object.keys(tempData).concat(Object.keys(humData)))]
-
-            var data = ["Date/Time,\tTemperature (F),\tHumidity (%)"]
-
-            for(const i in dates) {
-              console.log(dates[i])
-              const date = new Date(dates[i] * 1000)
-              var str = date.toString() + ",\t"
-              console.log(str)
-              if(tempData[dates[i]]) {
-                str = str + tempData[dates[i]].toString() + ",\t"
-              }
-              else {
-                str = str + ",\t"
-              }
-              if(humData[dates[i]]) {
-                str = str + humData[dates[i]].toString()
-              }
-              data.push(str)
+            for (const [key, value] of Object.entries(snapshot.val())) {
+              const date = new Date(key * 1000);
+              var str = date.toString() + ",\t";
+              str = str + value[0].toString() + ",\t";
+              str = str + value[1].toString() + ",\t";
+              str = str + value[2].toString() + ",\t";
+              str = str + value[3].toString() + ",\t";
+              str = str + value[4].toString() + ",\t";
+              str = str + value[5].toString() + ",\t";
+              out.push(str);
             }
 
-            data = data.join("\n")
+            out = out.join("\n");
 
             // Create and download csv
-            const blob = new Blob([data], { type: "text/csv" });
+            const blob = new Blob([out], { type: "text/csv" });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.setAttribute("href", url);
@@ -371,11 +386,36 @@ export default {
           console.error(error);
         });
     },
+    toggleNerd() {
+      this.nerd = !this.nerd;
+      if (this.user) {
+        var name = this.user.displayName;
+        name = name.split(" 🤓");
+        name = name.join("");
+        if (this.nerd) {
+          updateProfile(auth.currentUser, {
+            displayName: name + " 🤓",
+          })
+            .then(() => {})
+            .catch((error) => {
+              console.log(error);
+            });
+        } else {
+          updateProfile(auth.currentUser, {
+            displayName: name,
+          })
+            .then(() => {})
+            .catch((error) => {
+              console.log(error);
+            });
+        }
+      }
+    },
     updateTargetTemperature() {
-      set(targetTempRef, this.target.temperature);
+      set(targetTempRef, parseInt(this.target.temperature));
     },
     updateTargetHumidity() {
-      set(targetHumRef, this.target.humidity);
+      set(targetHumRef, parseInt(this.target.humidity));
     },
     updatePidP() {
       set(tempKpRef, this.pid.p);
