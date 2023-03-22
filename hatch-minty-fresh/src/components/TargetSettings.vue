@@ -412,10 +412,10 @@ export default {
       }
     },
     updateTargetTemperature() {
-      set(targetTempRef, parseInt(this.target.temperature));
+      set(targetTempRef, parseFloat(this.target.temperature));
     },
     updateTargetHumidity() {
-      set(targetHumRef, parseInt(this.target.humidity));
+      set(targetHumRef, parseFloat(this.target.humidity));
     },
     updatePidP() {
       set(tempKpRef, this.pid.p);
