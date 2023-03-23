@@ -42,7 +42,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { LTTB } from "downsample";
 
 const auth = getAuth();
-const maxPoints = 400;
+const maxPoints = 850;
 
 export default {
   name: "AtmosphereCard",
