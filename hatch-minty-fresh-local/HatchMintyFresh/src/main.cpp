@@ -10,13 +10,13 @@
 #include <WiFiUdp.h>
 
 // define GPIO
+#define RESETPIN 16         // pin D0
 #define ZCROSS 5            // pin D1
 #define PWM 4               // pin D2
 #define LOWERDHTPIN 14      // pin D5
 #define UPPERDHTPIN 12      // pin D6
 #define HUMIDITYPOWER 13    // pin D7
 #define HUMIDITYCONTROL 15  // pin D8
-#define RESETPIN 9          // pin SDS
 
 // define wifi credentials
 #define WIFI_SSID "Braden, Use This Wifi"
@@ -54,6 +54,7 @@ Ticker timer;
 unsigned long pidStartTime = millis();
 unsigned long humDataPrevTime = millis();
 unsigned long sendDataPrevTime = millis();
+unsigned long resetTimer = millis();
 
 // Create Firebase Objects
 FirebaseData fbdo;
@@ -323,7 +324,7 @@ void setup() {
   pinMode(HUMIDITYPOWER, OUTPUT);
   pinMode(HUMIDITYCONTROL, OUTPUT);
   turnOffHum();
-  TargetHum = 45;
+  TargetHum = 42.5;
   
   // Wifi setup
   pinMode(BUILTIN_LED, OUTPUT);
@@ -359,6 +360,11 @@ void loop() {
     updatePID();
   }
   
+  // Reset Timer
+  if(millis() - pidStartTime >= 600000) {
+    digitalWrite(RESETPIN, LOW);
+  }
+
   // Update Humidity Timer
   if(millis() - humDataPrevTime >= 4000) {
     updateHum();
