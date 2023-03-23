@@ -71,4 +71,6 @@ export default {
 .v-toolbar-title {
   color: rgb(var(--v-theme-primary));
 }
+
+html { overflow-y: auto !important}
 </style>
