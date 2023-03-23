@@ -5,10 +5,10 @@
       <v-row no-gutters>
         <v-col class="text-h5 text-primary">
           <v-icon color="primary" icon="mdi-thermometer" />
-          <span v-if="!loading">{{
-            parseFloat(currentTemperature.toFixed(1))
-          }}&deg;F</span>
-          <line-loader v-else width="70px"/>
+          <span v-if="!loading"
+            >{{ parseFloat(currentTemperature.toFixed(1)) }}&deg;F</span
+          >
+          <line-loader v-else width="70px" />
         </v-col>
       </v-row>
       <v-row no-gutters>
@@ -17,7 +17,7 @@
           <span v-if="!loading">
             {{ parseFloat(currentHumidity.toFixed(1)) }}%
           </span>
-          <line-loader v-else width="70px"/>
+          <line-loader v-else width="70px" />
         </v-col>
       </v-row>
     </v-card-text>
@@ -35,12 +35,14 @@
 </template>
 
 <script>
-import { db } from "@/plugins/firebase"
-import { ref, onValue} from "firebase/database"
-import LineLoader from "@/components/LineLoader.vue"
+import { db } from "@/plugins/firebase";
+import { ref, onValue } from "firebase/database";
+import LineLoader from "@/components/LineLoader.vue";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { LTTB } from "downsample";
 
 const auth = getAuth();
+const maxPoints = 850;
 
 export default {
   name: "AtmosphereCard",
@@ -67,40 +69,41 @@ export default {
       onValue(dpRef, (snapshot) => {
         const data = snapshot.val();
 
-        var latest = Object.keys(data).reduce(function(a, b){ return a > b ? a : b })
-        this.currentTemperature = data[latest][0]
-        this.currentHumidity = data[latest][1]
-        console.log(this.currentTemperature)
+        var isNerd = this.user && this.user.displayName.includes(" 🤓");
 
-        var temp = []
-        var hum = []
-        var tempIntensity = []
-        var humOn = []
-        var targetTemp = []
-        var targetHum = []
+        // Get the most recent values
+        var latest = Object.keys(data).reduce(function (a, b) {
+          return a > b ? a : b;
+        });
+        this.currentTemperature = data[latest][0];
+        this.currentHumidity = data[latest][1];
 
-        for (const [key, value] of Object.entries(data)) {
-          var t = new Date(0).setUTCSeconds(parseInt(key))
-          temp.push({x: t, y: value[0]})
-          hum.push({x: t, y: value[1]})
-          tempIntensity.push({x: t, y: value[2]})
-          value[3] ? humOn.push({x: t, y: 1}) : humOn.push({x: t, y: 0})
-          targetTemp.push({x: t, y: value[4]})
-          targetHum.push({x: t, y: value[5]})
+        // Get data arrays
+        var times = Object.keys(data);
+        var temp = times.map((v) => {return { x: new Date(0).setUTCSeconds(parseInt(v)), y: data[v][0] }});
+        var hum = times.map((v) => {return { x: new Date(0).setUTCSeconds(parseInt(v)), y: data[v][1] }});
+        var tempIntensity = isNerd ? times.map((v) => {return {x: new Date(0).setUTCSeconds(parseInt(v)), y: data[v][2] }}) : null;
+        var humOn = isNerd ? times.map((v) => {return {x: new Date(0).setUTCSeconds(parseInt(v)), y: data[v][3] ? 0 : 1 }}) : null;
+        var targetTemp = times.map((v) => {return { x: new Date(0).setUTCSeconds(parseInt(v)), y: data[v][4] }});
+        var targetHum = times.map((v) => {return { x: new Date(0).setUTCSeconds(parseInt(v)), y: data[v][5] }});
+
+        // Downsample if needed
+        if (times.length > maxPoints) {
+          temp = LTTB(temp, maxPoints);
+          hum = LTTB(hum, maxPoints);
+          tempIntensity = isNerd ? LTTB(tempIntensity, maxPoints) : null;
+          humOn = isNerd ? LTTB(humOn, maxPoints) : null;
+          targetTemp = LTTB(targetTemp, maxPoints);
+          targetHum = LTTB(targetHum, maxPoints);
         }
 
-        this.series[0].data = temp
-        this.series[1].data = hum
-        this.series[2].data = targetTemp
-        this.series[3].data = targetHum
-        if(this.user && this.user.displayName.includes(" 🤓")) {
-          this.series[4].data = tempIntensity
-          this.series[5].data = humOn
-        }
-        else {
-          this.series[4].data = null
-          this.series[5].data = null
-        }
+        // Assign data to the series
+        this.series[0].data = temp;
+        this.series[1].data = hum;
+        this.series[4].data = isNerd ? tempIntensity : null;
+        this.series[5].data = isNerd ? humOn : null;
+        this.series[2].data = targetTemp;
+        this.series[3].data = targetHum;
 
         this.loading = false;
       });
@@ -117,44 +120,58 @@ export default {
       {
         name: "Temperature",
         data: [],
-        type: 'area',
+        type: "area",
       },
       {
         name: "Humidity",
         data: [],
-        type: 'area',
+        type: "area",
       },
       {
         name: "Target Temperature",
         data: [],
-        type: 'area',
+        type: "area",
       },
       {
         name: "Target Humidity",
         data: [],
-        type: 'area',
+        type: "area",
       },
       {
         name: "Temperature Intensity",
         data: [],
-        type: 'area',
+        type: "area",
       },
       {
         name: "Humidity Off/On",
         data: [],
-        type: 'area',
+        type: "area",
       },
     ],
     chartOptions: {
-      colors: ['#00e396', '#008ffb', '#e3004d', '#fb6c00', '#ff0000', '#0000ff'],
+      colors: [
+        "#00e396",
+        "#008ffb",
+        "#e3004d",
+        "#fb6c00",
+        "#00ff00",
+        "#0000ff",
+      ],
       stroke: {
-        width: [4, 4, 2, 2, 2, 0],
-        curve: ['smooth','smooth','stepline','stepline', 'smooth', 'stepline'],
-        dashArray: [0, 0, 2, 2, 2, 2]
+        width: [4, 4, 2, 2, 1, 1],
+        curve: [
+          "smooth",
+          "smooth",
+          "stepline",
+          "stepline",
+          "smooth",
+          "stepline",
+        ],
+        dashArray: [0, 0, 2, 2, 0, 0],
       },
       fill: {
-        type: "solid",
-        opacity: [0.35, 0.35, 0, 0, 0, 0.07]
+        type: ["gradient", "gradient", "solid", "solid", "solid", "solid"],
+        opacity: [0.35, 0.35, 0, 0, 0.1, 0.1],
       },
       legend: {
         show: true,
@@ -163,7 +180,13 @@ export default {
           useSeriesColors: true,
         },
       },
+      markers: {
+        size: 0,
+      },
       chart: {
+        animations: {
+          enabled: false,
+        },
         height: 350,
         type: "area",
         toolbar: {
@@ -187,12 +210,12 @@ export default {
         labels: {
           datetimeUTC: false,
           datetimeFormatter: {
-              year: 'yyyy',
-              month: "MMM 'yy",
-              day: 'dd MMM',
-              hour: 'h:mm TT',
-              minute: 'h:mm:ss TT',
-              second: 'h:mm:ss TT'
+            year: "yyyy",
+            month: "MMM 'yy",
+            day: "dd MMM",
+            hour: "h:mm TT",
+            minute: "h:mm:ss TT",
+            second: "h:mm:ss TT",
           },
           style: {
             colors: "#a0a0a0",
@@ -223,7 +246,9 @@ export default {
               colors: "#00e396",
               fontWeight: 600,
             },
-            formatter: (v) => { return Math.floor(v) },
+            formatter: (v) => {
+              return Math.floor(v);
+            },
           },
         },
         {
@@ -248,7 +273,9 @@ export default {
               colors: "#008ffb",
               fontWeight: 600,
             },
-            formatter: (v) => { return Math.floor(v) },
+            formatter: (v) => {
+              return Math.floor(v);
+            },
           },
         },
         {
@@ -267,11 +294,10 @@ export default {
           show: false,
         },
         {
-          max: 1,
+          max: 10,
           min: 0,
           show: false,
         },
-        
       ],
       tooltip: {
         shared: true,
@@ -280,7 +306,9 @@ export default {
           format: "MMM dd yyyy h:mm:ss TT",
         },
         y: {
-            formatter: (value) => {return parseFloat(value.toFixed(1))},
+          formatter: (value) => {
+            return parseFloat(value.toFixed(1));
+          },
         },
       },
     },
