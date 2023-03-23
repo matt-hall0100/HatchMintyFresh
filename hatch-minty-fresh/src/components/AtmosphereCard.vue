@@ -70,7 +70,6 @@ export default {
         var latest = Object.keys(data).reduce(function(a, b){ return a > b ? a : b })
         this.currentTemperature = data[latest][0]
         this.currentHumidity = data[latest][1]
-        console.log(this.currentTemperature)
 
         var temp = []
         var hum = []
@@ -146,15 +145,15 @@ export default {
       },
     ],
     chartOptions: {
-      colors: ['#00e396', '#008ffb', '#e3004d', '#fb6c00', '#ff0000', '#0000ff'],
+      colors: ['#00e396', '#008ffb', '#e3004d', '#fb6c00', '#00ff00', '#0000ff'],
       stroke: {
-        width: [4, 4, 2, 2, 2, 0],
+        width: [4, 4, 2, 2, 1, 1],
         curve: ['smooth','smooth','stepline','stepline', 'smooth', 'stepline'],
-        dashArray: [0, 0, 2, 2, 2, 2]
+        dashArray: [0, 0, 2, 2, 0, 0]
       },
       fill: {
-        type: "solid",
-        opacity: [0.35, 0.35, 0, 0, 0, 0.07]
+        type: ['gradient','gradient','solid','solid','solid','solid'],
+        opacity: [0.35, 0.35, 0, 0, 0.1, 0.1],
       },
       legend: {
         show: true,
