@@ -10,22 +10,21 @@
 #include <WiFiUdp.h>
 
 // define GPIO
-#define RESETPIN 16         // pin D0
+#define LOCKDOWNSWITCH 16   // pin D0
 #define ZCROSS 5            // pin D1
 #define PWM 4               // pin D2
 #define LOWERDHTPIN 14      // pin D5
 #define UPPERDHTPIN 12      // pin D6
 #define HUMIDITYPOWER 13    // pin D7
-#define HUMIDITYCONTROL 15  // pin D8
 
 // define wifi credentials
-#define WIFI_SSID "Braden, Use This Wifi"
+#define WIFI_SSID "MintyFre$h"
 #define WIFI_PASSWORD ""
 
 // define firebase constants
 #define API_KEY ""
 #define USER_EMAIL "minty@fresh.com"
-#define USER_PASSWORD ""
+#define USER_PASSWORD "mintyfresh"
 #define DATABASE_URL "https://hatchmintyfresh-default-rtdb.firebaseio.com/"
 
 
@@ -34,17 +33,23 @@ DHT highdht(UPPERDHTPIN, DHT22);
 DHT lowdht(LOWERDHTPIN, DHT22);
 
 // Create PID Objects
-double TargetTemp, Input, Output = 0;
-double softKp = 0.3, softKi = 30, softKd = 0.5;
+double TargetTemp, Input, Output, prevInput = 0;
+double softKp = 40, softKi = 500, softKd = 900;
 double hardKp = 20, hardKi = 15, hardKd = 0;
 double softMinRelThres = -2, softMaxRelThres = 1.5;
 int softMinOut = 10, softMaxOut = 55;
 int hardMinOut = 0, hardMaxOut = 99;
-PID tempPID(&Input, &Output, &TargetTemp, softKp, softKi, softKd, DIRECT);
+PID tempPID(&Input, &Output, &TargetTemp, softKp, softKi, softKd, 1, DIRECT);
 bool softActive = true;
+
+// Create Lowpass Filter Constants
+const float RC = 1; // Resistance-Capacitance Time Constant
+const float dt = 4; // Sampling time interval in seconds
+const float alpha = dt / (RC + dt); // Filter coefficient
 
 // Create Humidity Controller Objects
 double Humidity;
+double prevHumidity;
 double TargetHum;
 bool HumidifierOn;
 
@@ -82,7 +87,17 @@ bool firstTimeBoot = true;
 |  Returns:  average temperature in degrees fahrenheit
 *-------------------------------------------------------------------*/
 double getAvgTemp() {
-  return ((lowdht.readTemperature(true) + highdht.readTemperature(true))/2.0);
+  float lHighTemp = highdht.readTemperature(true);
+  float lLowTtemp = lowdht.readTemperature(true);
+  if (isnan(lHighTemp)) {
+    if (!isnan(lLowTtemp)) {
+      lHighTemp = lLowTtemp;
+    }
+  }
+  else if (isnan(lLowTtemp)) {
+    lLowTtemp = lHighTemp;
+  }
+  return ((lHighTemp + lLowTtemp)/2.0);
 }
 
 
@@ -97,7 +112,17 @@ double getAvgTemp() {
 |  Returns:  average humidity in percent
 *-------------------------------------------------------------------*/
 double getAvgHum() {
-  return ((lowdht.readHumidity() + highdht.readHumidity())/2.0);
+  float lHighHum = highdht.readHumidity();
+  float lLowHum = lowdht.readHumidity();
+  if (isnan(lHighHum)) {
+    if (!isnan(lLowHum)) {
+      lHighHum = lLowHum;
+    }
+  }
+  else if (isnan(lLowHum)) {
+    lLowHum = lHighHum;
+  }
+  return ((lHighHum + lLowHum)/2.0);
 }
 
 
@@ -111,15 +136,8 @@ double getAvgHum() {
 |  Returns:  none
 *-------------------------------------------------------------------*/
 void turnOnHum() {
-  if (!HumidifierOn) {
-    HumidifierOn = true;
     digitalWrite(HUMIDITYPOWER, HIGH);
-    digitalWrite(HUMIDITYCONTROL, HIGH);
-    delay(50);
-    digitalWrite(HUMIDITYCONTROL, LOW);
-    delay(50);
-    digitalWrite(HUMIDITYCONTROL, HIGH);
-  }
+    HumidifierOn = MB_JSON_AddTrueToObject;
 }
 
 
@@ -133,9 +151,8 @@ void turnOnHum() {
 |  Returns:  none
 *-------------------------------------------------------------------*/
 void turnOffHum() {
-  HumidifierOn = false;
   digitalWrite(HUMIDITYPOWER, LOW);
-  digitalWrite(HUMIDITYCONTROL, LOW);
+  HumidifierOn = false;
 }
 
 
@@ -152,25 +169,52 @@ void updatePID() {
   pidStartTime = millis();
   double lInput = getAvgTemp();
   if(!isnan(lInput)) {  // check for NaN
-    Input = lInput;
-    // soft PID controller mode
-    if (TargetTemp+softMinRelThres <= Input && TargetTemp+softMaxRelThres >= Input) {
-      if (softActive == false) {
-        softActive = true;
-        tempPID.SetTunings(softKp, softKi, softKd);
-        tempPID.SetOutputLimits(softMinOut, softMaxOut);
+    lInput = alpha * lInput + (1 - alpha) * Input;
+    if(abs(lInput - prevInput) < 2) {
+      Input = lInput;
+      prevInput = Input;
+      // soft PID controller mode
+      if (TargetTemp+softMinRelThres <= Input && TargetTemp+softMaxRelThres >= Input) {
+        if (softActive == false) {
+          softActive = true;
+          tempPID.SetTunings(softKp, softKi, softKd);
+          tempPID.SetOutputLimits(softMinOut, softMaxOut);
+        }
       }
-    }
 
-    // hard PID controller mode
-    else if (softActive == true)
-    {
-      softActive = false;
-      tempPID.SetTunings(hardKp, hardKi, hardKd);
-      tempPID.SetOutputLimits(hardMinOut, hardMaxOut);
+      // hard PID controller mode
+      else if (softActive == true)
+      {
+        softActive = false;
+        tempPID.SetTunings(hardKp, hardKi, hardKd);
+        tempPID.SetOutputLimits(hardMinOut, hardMaxOut);
+      }
+      
+      tempPID.Compute();
     }
-    
-    tempPID.Compute();
+    else {
+      prevInput = lInput;
+    }
+  }
+}
+
+
+/*------------------------------------------------- updateLockDown ---
+|  Function updateLockDown
+|
+|  Purpose:  updates all applicable configurable data based on the 
+|            position of the lockdown switch
+|
+|  Parameters: none
+|
+|  Returns:  none
+*-------------------------------------------------------------------*/
+void updateLockDown() {
+  if(digitalRead(LOCKDOWNSWITCH)) {
+    TargetHum = 51;
+  }
+  else {
+    TargetHum = 41;
   }
 }
 
@@ -185,20 +229,27 @@ void updatePID() {
 |  Returns:  none
 *-------------------------------------------------------------------*/
 void updateHum() {
+  updateLockDown();
   humDataPrevTime = millis();
   double lInput = getAvgHum();
   if(!isnan(lInput)) {  // check for NaN
-    Humidity = lInput;
-    if (TargetHum > Humidity) {
-      if (!HumidifierOn) {
-        turnOnHum();
+    lInput = alpha * lInput + (1 - alpha) * Humidity;
+    if(abs(lInput - prevHumidity) < 2) {
+      Humidity = lInput;
+      prevHumidity = Humidity;
+      if (TargetHum > Humidity) {
+        if (!HumidifierOn) {
+          turnOnHum();
+        }
+      }
+      else if (HumidifierOn)
+      {
+        turnOffHum();
       }
     }
-    else if (HumidifierOn)
-    {
-      turnOffHum();
+    else {
+      prevHumidity = lInput;
     }
-    
   }
 }
 
@@ -242,6 +293,9 @@ IRAM_ATTR void onTime() {
 }
 
 
+void(* resetFunc) (void) = 0;//declare reset function at address 0
+
+
 /*------------------------------------------------- initWiFi ---------
 |  Function initWiFi
 |
@@ -255,7 +309,7 @@ IRAM_ATTR void initWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   int count = 0;
   if(!firstTimeBoot) {
-    digitalWrite(RESETPIN, LOW);
+    resetFunc();
   }
   while (WiFi.status() != WL_CONNECTED && count < 15) {
     digitalWrite(BUILTIN_LED, HIGH);
@@ -307,9 +361,17 @@ void streamTimeoutCallback(bool timeout)
 
 
 void setup() {
-  // reset pin setup
-  digitalWrite(RESETPIN, HIGH);
-  pinMode(RESETPIN, OUTPUT);
+  // lockDownSwitch pin setup
+  pinMode(LOCKDOWNSWITCH, INPUT);
+  updateLockDown();
+
+  // DHT setup
+  highdht.begin();
+  lowdht.begin();
+
+  // ping DHTs
+  getAvgTemp();
+  getAvgHum();
   
   // timer setup
   timer1_attachInterrupt(onTime); // Add ISR Function
@@ -322,9 +384,8 @@ void setup() {
   
   // humitiy setup
   pinMode(HUMIDITYPOWER, OUTPUT);
-  pinMode(HUMIDITYCONTROL, OUTPUT);
   turnOffHum();
-  TargetHum = 42.5;
+  HumidifierOn = false;
   
   // Wifi setup
   pinMode(BUILTIN_LED, OUTPUT);
@@ -336,38 +397,41 @@ void setup() {
   config.database_url = DATABASE_URL;
   Firebase.reconnectWiFi(true);
   fbdo.setResponseSize(4096);
-  !Firebase.signUp(&config, &auth, "", "");
+  auth .user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+  // Firebase.signUp(&config, &auth, "", "");
   Firebase.begin(&config, &auth);
-  Firebase.RTDB.beginStream(&stream, "/Configurable");
-  Firebase.RTDB.setStreamCallback(&stream, streamCallback, streamTimeoutCallback);
-
-  // DHT setup
-  highdht.begin();
-  lowdht.begin();
+  // Firebase.RTDB.beginStream(&stream, "/Configurable");
+  // Firebase.RTDB.setStreamCallback(&stream, streamCallback, streamTimeoutCallback);
 
   // PID setup
   TargetTemp = 99.5;
   Input = getAvgTemp();
   tempPID.SetOutputLimits(softMinOut, softMaxOut);
-  tempPID.SetSampleTime(2000);
+  tempPID.SetSampleTime(4000);
   tempPID.SetMode(AUTOMATIC);
+
+  // Init Lowpass
+  Humidity = getAvgHum();
+  prevHumidity = Humidity;
+  delay(500);
+  Input = getAvgTemp();
+  prevInput = Input;
+  
+  sendDataPrevTime = millis();
 }
 
 
 void loop() {
   // Update PID Timer
-  if(millis() - pidStartTime >= 2000) {
+  if(millis() - pidStartTime >= 4000) {
+    updateHum();
     updatePID();
   }
   
   // Reset Timer
-  if(millis() - pidStartTime >= 600000) {
-    digitalWrite(RESETPIN, LOW);
-  }
-
-  // Update Humidity Timer
-  if(millis() - humDataPrevTime >= 4000) {
-    updateHum();
+  if(millis() - resetTimer >= 600000) {
+    resetFunc();
   }
   
   // Add sample to Firebase Timer
@@ -388,11 +452,11 @@ void loop() {
   }
 
   // Firebase Data Changed
-  if(dataChanged && Firebase.ready()) {
-    dataChanged = false;
-    Firebase.RTDB.getFloat(&fbdo, "Configurable/TargetTemp/");
-    TargetTemp = fbdo.to<float>();
-    Firebase.RTDB.getFloat(&fbdo, "Configurable/TargetHum/");
-    TargetHum = fbdo.to<float>();
-  }
+  // if(dataChanged && Firebase.ready()) {
+  //   dataChanged = false;
+  //   Firebase.RTDB.getFloat(&fbdo, "Configurable/TargetTemp/");
+  //   TargetTemp = fbdo.to<float>();
+  //   Firebase.RTDB.getFloat(&fbdo, "Configurable/TargetHum/");
+  //   TargetHum = fbdo.to<float>();
+  // }
 }
